@@ -8,9 +8,9 @@ El sistema físico consta de un módulo embebido equipado con sensores que miden
 ***
 
 ## herramientas de desarrolllo
-- lenguaje:
+- lenguaje: JavaScript, HTML5
 - base de datos: firebase
-- programacion:
+- programacion: HTML5 y CSS3, JavaScript, Firebase, Node.js
 - ide: VS code
 - cvs: 
 
@@ -23,4 +23,3 @@ El sistema físico consta de un módulo embebido equipado con sensores que miden
     - [] SPRINT 1
     - [] SPRINT 2
     - [] SPRINT 3
-    - [] SPRINT 4
