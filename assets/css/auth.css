@@ -1,0 +1,184 @@
+:root {
+    /* Paleta optimizada para tecnología/cadena de frío */
+    --bg-overlay: rgba(15, 23, 42, 0.75); /* Capa oscura azulada sobre la imagen */
+    --card-bg: #ffffff;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --primary-blue: #2563eb;
+    --primary-blue-hover: #1d4ed8;
+    --bg-input: #f8fafc;
+    --border-color: #cbd5e1;
+}
+
+body {
+    /* Imagen de fondo enfocada en logística/tecnología industrial */
+    background-image: linear-gradient(var(--bg-overlay), var(--bg-overlay)), 
+                      url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=1920&auto=format&fit=crop');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    
+    font-family: 'Source Sans Pro', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+/* TARJETA MÁS GRANDE Y ROBUSTA */
+.auth-card {
+    background-color: var(--card-bg);
+    width: 100%;
+    max-width: 480px; /* Aumentamos de 420px a 480px */
+    padding: 45px 40px; /* Más espacio interno para que respire */
+    border-radius: 20px; /* Esquinas curvas más sutiles y modernas */
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    box-sizing: border-box;
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.auth-header h1 {
+    font-size: 1.8rem; /* Título más grande */
+    color: var(--text-primary);
+    margin: 0;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+/* Tabs de navegación */
+.auth-tabs {
+    display: flex;
+    background-color: #f1f5f9;
+    border-radius: 12px;
+    padding: 6px;
+    margin-bottom: 30px;
+}
+
+.tab-btn {
+    flex: 1;
+    border: none;
+    background: none;
+    padding: 14px; /* Más altos */
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.25s ease;
+}
+
+.tab-btn.active {
+    background-color: var(--primary-blue);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+}
+
+/* FORMULARIOS CON INPUTS MÁS GRANDES */
+.form-group {
+    margin-bottom: 22px;
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.form-group input {
+    border: 1px solid var(--border-color);
+    padding: 14px 16px; /* Inputs considerablemente más altos y cómodos */
+    border-radius: 10px;
+    font-size: 1rem;
+    color: var(--text-primary);
+    background-color: var(--bg-input);
+    transition: all 0.2s ease;
+    outline: none;
+}
+
+.form-group input:focus {
+    border-color: var(--primary-blue);
+    background-color: #ffffff;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1); /* Efecto de enfoque moderno */
+}
+
+/* Botón principal */
+.btn-submit {
+    width: 100%;
+    background-color: var(--primary-blue);
+    color: white;
+    border: none;
+    padding: 16px; /* Botón más imponente */
+    border-radius: 10px;
+    font-size: 1.05rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-top: 10px;
+}
+
+.btn-submit:hover {
+    background-color: var(--primary-blue-hover);
+}
+
+.divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    margin: 25px 0;
+}
+
+.divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #e2e8f0;
+}
+.divider:not(:empty)::before { margin-right: 1em; }
+.divider:not(:empty)::after { margin-left: 1em; }
+
+/* Botón de Google */
+.btn-google {
+    width: 100%;
+    background-color: #ffffff;
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: 14px;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.2s;
+}
+
+.btn-google:hover {
+    background-color: var(--bg-input);
+    border-color: #94a3b8;
+}
+
+/* Estilos para la notificación interna de la tarjeta */
+.alert-success {
+    background-color: #eff6ff; /* Azul muy claro */
+    color: #1e40af; /* Texto azul oscuro */
+    border: 1px solid #bfdbfe;
+}
+
+.alert-danger {
+    background-color: #fef2f2; /* Rojo/Rosa muy claro */
+    color: #991b1b; /* Texto rojo oscuro */
+    border: 1px solid #fecaca;
+}
