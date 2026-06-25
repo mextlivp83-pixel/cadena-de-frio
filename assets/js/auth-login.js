@@ -61,7 +61,7 @@ async function verificarYAsignarRol(user, nameCustom = null) {
         const userDoc = await getDoc(userDocRef);
 
         if (!userDoc.exists()) {
-            // 1. Registramos al usuario nuevo con rol 'Operator'
+           
             await setDoc(userDocRef, {
                 correo: user.email,
                 nombre: nameCustom || user.displayName || "Usuario Registrado",

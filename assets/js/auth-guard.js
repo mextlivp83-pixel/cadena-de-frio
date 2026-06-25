@@ -24,7 +24,7 @@ onAuthStateChanged(auth, async (user) => {
                     txtNombre.textContent = datosUsuario.nombre || user.email;
                 }
 
-                // roles
+                // roles operador y admin
                 if (rol === "Operator") {
                     
                     const paginaActual = window.location.pathname.split("/").pop();
