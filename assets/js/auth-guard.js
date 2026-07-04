@@ -60,7 +60,7 @@ onAuthStateChanged(auth, async (user) => {
             } else {
                 console.error("El usuario no tiene documento en Firestore.");
                 await signOut(auth);
-                window.location.href = "/login.html";
+                window.location.href = "login.html";
             }
         } catch (error) {
             console.error("Error en el Guardián:", error);
