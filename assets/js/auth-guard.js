@@ -12,7 +12,7 @@ onAuthStateChanged(auth, async (user) => {
         // Comprobación robusta: si la URL no contiene "login", redirige
         if (!window.location.pathname.toLowerCase().includes("login")) {
             // Usamos la ruta absoluta con "/" al inicio para que busque en la raíz de Vercel
-            window.location.href = "/login.html";
+            window.location.href = "/Login.html";
         } else {
             // Si ya estamos en la página de login, nos aseguramos de que sea visible
             document.body.style.opacity = "1";
@@ -60,7 +60,7 @@ onAuthStateChanged(auth, async (user) => {
             } else {
                 console.error("El usuario no tiene documento en Firestore.");
                 await signOut(auth);
-                window.location.href = "login.html";
+                window.location.href = "/Login.html";
             }
         } catch (error) {
             console.error("Error en el Guardián:", error);
@@ -121,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             try {
                 await signOut(auth);
-                window.location.href = "login.html";
+                window.location.href = "/Login.html";
             } catch (error) {
                 console.error("Error al cerrar sesión:", error);
             }
