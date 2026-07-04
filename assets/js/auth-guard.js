@@ -1,15 +1,18 @@
-
 import { auth, db } from './firebase-config.js';
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+// Ocultar el cuerpo del documento inmediatamente para evitar el parpadeo visual del dashboard
 document.body.style.opacity = "0";
 document.body.style.transition = "opacity 0.2s ease";
 
 onAuthStateChanged(auth, async (user) => {
     if (!user) {
         console.log("Acceso denegado: Sin sesión activa.");
-        window.location.href = "login.html";
+        // Validamos si ya estamos en login.html para evitar bucles de redirección infinitos
+        if (!window.location.pathname.includes("login.html")) {
+            window.location.href = "login.html";
+        }
     } else {
         try {
             const userDocRef = doc(db, "usuarios", user.uid);
@@ -24,14 +27,22 @@ onAuthStateChanged(auth, async (user) => {
                     txtNombre.textContent = datosUsuario.nombre || user.email;
                 }
 
-                // roles
+                // Control estricto de roles y permisos
                 if (rol === "Operator") {
-                    
-                    const paginaActual = window.location.pathname.split("/").pop();
+                    // Convertimos la URL actual a minúsculas para una validación segura
+                    const rutaCompleta = window.location.pathname.toLowerCase();
 
-                    const paginasProhibidas = ["catalogo.html", "reportes.html", "ia.html", "mapa_admin.html"];
+                    // Lista de módulos prohibidos para el rol Operator
+                    const paginasProhibidas = ["catalogo", "reportes", "ia", "mapa_admin"];
 
-                    if (paginasProhibidas.includes(paginaActual)) {
+                    // Validación robusta compatible con extensiones .html (local) y URLs limpias (Vercel)
+                    const esPaginaProhibida = paginasProhibidas.some(pagina => {
+                        // Extraemos el último fragmento de la ruta para compararlo con precisión
+                        const segmentoActual = rutaCompleta.split("/").pop();
+                        return segmentoActual.startsWith(pagina);
+                    });
+
+                    if (esPaginaProhibida) {
                         mostrarAccesoDenegadoEstetico();
                         return; 
                     }
@@ -39,6 +50,7 @@ onAuthStateChanged(auth, async (user) => {
                     ocultarModulosProhibidos();
                 }
 
+                // Si todo está en orden, mostramos la interfaz con una transición suave
                 document.body.style.opacity = "1";
 
             } else {
@@ -58,17 +70,13 @@ function mostrarAccesoDenegadoEstetico() {
     document.body.innerHTML = `
         <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0f172a; display: flex; justify-content: center; align-items: center; font-family: 'Segoe UI', Roboto, sans-serif; z-index: 99999;">
             <div style="background: #1e293b; padding: 40px; border-radius: 12px; text-align: center; max-width: 450px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); border: 1px solid #334155;">
-                
                 <div style="font-size: 50px; color: #f43f5e; margin-bottom: 20px;">🛡️</div>
-                
                 <h2 style="color: #f8fafc; margin: 0 0 10px 0; font-size: 24px; font-weight: 600;">Acceso Restringido</h2>
-                
                 <p style="color: #94a3b8; font-size: 15px; line-height: 1.6; margin-bottom: 25px;">
                     No cuentas con los permisos de <strong>Administrador</strong> requeridos para visualizar este módulo de la cadena de frío.
                 </p>
-                
                 <button id="btn-redirect-now" style="background: #3b82f6; color: white; border: none; padding: 12px 24px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background 0.2s; font-size: 14px; width: 100%;">
-                    Volver al Inicio (3s...)
+                    Volver al Inicio (5s...)
                 </button>
             </div>
         </div>
