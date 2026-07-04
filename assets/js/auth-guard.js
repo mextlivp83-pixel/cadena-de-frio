@@ -9,9 +9,13 @@ document.body.style.transition = "opacity 0.2s ease";
 onAuthStateChanged(auth, async (user) => {
     if (!user) {
         console.log("Acceso denegado: Sin sesión activa.");
-        // Validamos si ya estamos en login.html para evitar bucles de redirección infinitos
-        if (!window.location.pathname.includes("login.html")) {
-            window.location.href = "login.html";
+        // Comprobación robusta: si la URL no contiene "login", redirige
+        if (!window.location.pathname.toLowerCase().includes("login")) {
+            // Usamos la ruta absoluta con "/" al inicio para que busque en la raíz de Vercel
+            window.location.href = "/login.html";
+        } else {
+            // Si ya estamos en la página de login, nos aseguramos de que sea visible
+            document.body.style.opacity = "1";
         }
     } else {
         try {
@@ -56,7 +60,7 @@ onAuthStateChanged(auth, async (user) => {
             } else {
                 console.error("El usuario no tiene documento en Firestore.");
                 await signOut(auth);
-                window.location.href = "login.html";
+                window.location.href = "/login.html";
             }
         } catch (error) {
             console.error("Error en el Guardián:", error);
