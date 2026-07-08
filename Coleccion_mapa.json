@@ -1,0 +1,219 @@
+{
+  "_metadata": {
+    "descripcion": "Colección de datos normalizada a partir de las capturas de Firestore y del archivo mapa.html.",
+    "formato_fechas": "ISO 8601",
+    "nota": "Los campos Año, Marca, Modelo y Dispositivo de Enfriamiento aparecen vacíos en la captura; se conservan como null."
+  },
+  "camiones": {
+    "CAM-01": {
+      "unidadId": "CAM-01",
+      "nombreUnidad": "Unidad Refrigerada 01",
+      "matricula": "JAL-101",
+      "anio": null,
+      "marca": null,
+      "modelo": null,
+      "dispositivoEnfriamiento": null,
+      "estado": "En movimiento",
+      "activo": true,
+      "conductorId": "COND-01",
+      "envioId": null,
+      "ubicacionActual": {
+        "lat": 20.6736,
+        "lng": -103.3444
+      },
+      "velocidadKmh": 65,
+      "temperaturaActualC": 4.5,
+      "humedadActualPct": 58,
+      "puertaAbierta": false,
+      "alertaActiva": false,
+      "nivelAlerta": "normal",
+      "kmRecorridosHoy": 65
+    },
+    "CAM-02": {
+      "unidadId": "CAM-02",
+      "nombreUnidad": "Unidad Refrigerada 02",
+      "matricula": "JAL-202",
+      "anio": null,
+      "marca": null,
+      "modelo": null,
+      "dispositivoEnfriamiento": null,
+      "estado": "En movimiento",
+      "activo": true,
+      "conductorId": "COND-02",
+      "envioId": null,
+      "ubicacionActual": {
+        "lat": 20.642,
+        "lng": -103.41
+      },
+      "velocidadKmh": 55,
+      "temperaturaActualC": 3.2,
+      "humedadActualPct": 55,
+      "puertaAbierta": false,
+      "alertaActiva": false,
+      "nivelAlerta": "normal",
+      "kmRecorridosHoy": 57
+    },
+    "CAM-03": {
+      "unidadId": "CAM-03",
+      "nombreUnidad": "Unidad Refrigerada 03",
+      "matricula": "JAL-303",
+      "anio": null,
+      "marca": null,
+      "modelo": null,
+      "dispositivoEnfriamiento": null,
+      "estado": "En movimiento",
+      "activo": true,
+      "conductorId": "COND-03",
+      "envioId": null,
+      "ubicacionActual": {
+        "lat": 20.7,
+        "lng": -103.3
+      },
+      "velocidadKmh": 40,
+      "temperaturaActualC": 5.1,
+      "humedadActualPct": 61,
+      "puertaAbierta": false,
+      "alertaActiva": false,
+      "nivelAlerta": "normal",
+      "kmRecorridosHoy": 43
+    },
+    "CAM-04": {
+      "unidadId": "CAM-04",
+      "nombreUnidad": "Unidad Refrigerada 04",
+      "matricula": "JAL-404",
+      "anio": null,
+      "marca": null,
+      "modelo": null,
+      "dispositivoEnfriamiento": null,
+      "estado": "Estacionado",
+      "activo": true,
+      "conductorId": "COND-04",
+      "envioId": null,
+      "ubicacionActual": {
+        "lat": 20.61,
+        "lng": -103.35
+      },
+      "velocidadKmh": 0,
+      "temperaturaActualC": 4.8,
+      "humedadActualPct": 59,
+      "puertaAbierta": false,
+      "alertaActiva": false,
+      "nivelAlerta": "normal",
+      "kmRecorridosHoy": 28
+    },
+    "CAM-05": {
+      "unidadId": "CAM-05",
+      "nombreUnidad": "Unidad Refrigerada 05",
+      "matricula": "JAL-505",
+      "anio": null,
+      "marca": null,
+      "modelo": null,
+      "dispositivoEnfriamiento": null,
+      "estado": "En ruta",
+      "activo": true,
+      "conductorId": "COND-05",
+      "envioId": "ENV-001",
+      "ubicacionActual": {
+        "lat": 20.642,
+        "lng": -103.41
+      },
+      "velocidadKmh": 25,
+      "temperaturaActualC": 4.2,
+      "humedadActualPct": 60,
+      "puertaAbierta": false,
+      "alertaActiva": false,
+      "nivelAlerta": "normal",
+      "kmRecorridosHoy": 10,
+      "lecturas": {
+        "lectura001": {
+          "lat": 20.642,
+          "lng": -103.41,
+          "temperaturaC": 4.2,
+          "humedadPct": 60,
+          "velocidadKmh": 42,
+          "estado": "Normal"
+        },
+        "lectura002": {
+          "lat": 20.665,
+          "lng": -103.38,
+          "temperaturaC": 5.1,
+          "humedadPct": 60,
+          "velocidadKmh": 42,
+          "estado": "Normal"
+        },
+        "lectura003": {
+          "lat": 20.676,
+          "lng": -103.368,
+          "temperaturaC": 5.8,
+          "humedadPct": 63,
+          "velocidadKmh": 30,
+          "estado": "Alerta de temperatura"
+        },
+        "lectura004": {
+          "lat": 20.687,
+          "lng": -103.354,
+          "temperaturaC": 6.2,
+          "humedadPct": 63,
+          "velocidadKmh": 30,
+          "estado": "Alerta de temperatura"
+        }
+      }
+    }
+  },
+  "alertas": {
+    "alerta01": {
+      "enviada": true,
+      "fechaHora": "2026-07-05T15:08:30-06:00",
+      "mensaje": "Temperatura Crítica Dirígete al hospital más cercano",
+      "nivel": "Rojo",
+      "temperatura": 50,
+      "usuarioId": "usuario01"
+    }
+  },
+  "monitoreo": {
+    "usuario01": {
+      "color": "Verde",
+      "estado": "Normal",
+      "fechaHora": "2026-07-05T15:06:10-06:00",
+      "hospitalCercano": "Hospital General",
+      "temperaturaActual": 25
+    }
+  },
+  "usuarios": {
+    "usuario01": {
+      "correo": "karen@gmail.com",
+      "fechaRegistro": "2026-07-05T05:27:52.173Z",
+      "nombre": "Karen",
+      "rol": "Operator"
+    }
+  },
+  "rutas": {
+    "RUTA-001": {
+      "camionId": "CAM-05",
+      "envioId": "ENV-001",
+      "puntosGuia": [
+        {
+          "lat": 20.642,
+          "lng": -103.41
+        },
+        {
+          "lat": 20.653,
+          "lng": -103.399
+        },
+        {
+          "lat": 20.665,
+          "lng": -103.38
+        },
+        {
+          "lat": 20.676,
+          "lng": -103.368
+        },
+        {
+          "lat": 20.687,
+          "lng": -103.354
+        }
+      ],
+      "limiteTemperaturaAltaC": 5.5
+    }
+  }
+}
