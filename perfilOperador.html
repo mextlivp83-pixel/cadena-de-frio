@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfil de operador</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <link rel="stylesheet" href="assets/css/operador.css" />
+
+    <script type="module" src="assets/js/auth-guard.js"></script>
+</head>
+
+<body>
+    <div class="status-card">
+        <div class="status-header">
+            <h5 class="status-header-title">
+                <i class="bi bi-truck"></i> Estatus y Asignación Actual
+            </h5>
+            <span class="status-badge status-badge-loading" id="txt-camion-estado">Cargando...</span>
+        </div>
+        
+        <div class="status-body">
+            
+            <h6 class="section-subtitle">
+                <i class="bi bi-info-circle"></i> Identificación del Vehículo
+            </h6>
+            <div class="status-grid">
+                <div class="info-field">
+                    <span class="info-label">Placa / Matrícula</span>
+                    <span class="info-value" id="txt-camion-matricula">--</span>
+                </div>
+                <div class="info-field">
+                    <span class="info-label">ID de Placa ESP32</span>
+                    <span class="info-value" id="txt-camion-esp32">--</span>
+                </div>
+                <div class="info-field">
+                    <span class="info-label">Marca y Modelo</span>
+                    <span class="info-value" id="txt-camion-modelo">--</span>
+                </div>
+                <div class="info-field">
+                    <span class="info-label">ID de Unidad</span>
+                    <span class="info-value" id="txt-camion-unidadId">--</span>
+                </div>
+            </div>
+
+            <hr class="status-divider">
+
+            <h6 class="section-subtitle">
+                <i class="bi bi-cpu"></i> Telemetría en Tiempo Real
+            </h6>
+            <div class="telemetry-container">
+                <div class="telemetry-widget">
+                    <div class="telemetry-label">Temperatura Actual</div>
+                    <div class="telemetry-value color-temp" id="txt-telemetria-temperatura">-- °C</div>
+                </div>
+                <div class="telemetry-widget">
+                    <div class="telemetry-label">Humedad</div>
+                    <div class="telemetry-value color-hum" id="txt-telemetria-humedad">-- %</div>
+                </div>
+                <div class="telemetry-widget">
+                    <div class="telemetry-label">Velocidad</div>
+                    <div class="telemetry-value color-vel" id="txt-telemetria-velocidad">-- km/h</div>
+                </div>
+            </div>
+
+            <hr class="status-divider">
+
+           <h6 class="section-subtitle">
+    <i class="bi bi-shield-exclamation"></i> Estado del Trayecto
+</h6>
+<div class="status-grid">
+    <div class="info-field">
+        <span class="info-label">Punto de Entrega / Desvío</span>
+        <span class="info-value" id="txt-ruta-hospital">--</span>
+    </div>
+    <div class="info-field">
+        <span class="info-label">Semáforo de Seguridad</span>
+        <div class="status-actions">
+            <span class="alert-badge alert-badge-normal" id="badge-ruta-color">Normal</span>
+            <a href="carro.html" class="btn-mapa">
+                <i class="bi bi-map"></i> Ver mapa
+            </a>
+        </div>
+    </div>
+</div>
+
+        </div>
+    </div>
+</body>
+</html>
