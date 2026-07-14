@@ -140,7 +140,7 @@ if (formularioEsp32) {
         if (ultimo.numeroSecuencia) nuevoNumero = ultimo.numeroSecuencia + 1;
       }
       const numeroFormateado = nuevoNumero < 10 ? `0${nuevoNumero}` : nuevoNumero;
-      const nuevoIdPersonalizado = `DISP-${numeroFormateado}`;
+      const nuevoIdPersonalizado = `ESP32-${numeroFormateado}`;
 
       // Guardamos el documento usando su ID incremental único (DISP-01, DISP-02...)
       await setDoc(doc(db, "ESP32", nuevoIdPersonalizado), {
