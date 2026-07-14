@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoreo de Flota - Cadena de Frío | Estela de Ruta</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+    <style>
+        /* ============================================================
+           ESTILOS BASE (Tus estilos originales intactos)
+        ============================================================ */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+        body { background: #0a1020; color: white; display: flex; width: 100vw; overflow-x: hidden; }
+
+        .sidebar { width: 250px; min-height: 100vh; background-color: #203057 !important; padding: 24px; flex-shrink: 0; box-shadow: 4px 0 15px rgba(0,0,0,0.1); }
+        .nav-link-custom { color: #94a3b8 !important; font-size: 1.1rem; font-weight: 500; padding: 14px 18px; border-radius: 10px; transition: all 0.2s ease; display: flex; align-items: center; gap: 15px; text-decoration: none; margin-bottom: 8px; }
+        .nav-link-custom:hover { background-color: #1e293b; color: #3d5f99 !important; }
+        .nav-link-custom.active { background-color: #1e293b; color: #f8fafc !important; border-left: 5px solid #3b82f6; }
+
+        .main { flex: 1; padding: 20px; display: flex; flex-direction: column; width: calc(100vw - 250px); }
+        header { display: flex; justify-content: space-between; align-items: center; gap: 15px; margin-bottom: 20px; }
+
+        .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; width: 100%; }
+        .card { background: #16233f; padding: 20px; border-radius: 15px; border: none; }
+        .card h3 { display: flex; align-items: center; gap: 10px; font-size: 1.05rem; margin-bottom: 10px; color: #94a3b8 !important; font-weight: 600; }
+        .card h3 i { color: #3b82f6 !important; }
+        .card p { font-size: 30px; font-weight: bold; margin: 0; color: #ffffff !important; }
+
+        .dashboard { display: grid; grid-template-columns: 65% calc(35% - 15px); gap: 15px; width: 100%; }
+        .mapa, .grafica { background: #16233f; border-radius: 15px; padding: 15px; display: flex; flex-direction: column; }
+        #map { width: 100%; height: 430px; margin-top: 10px; border-radius: 10px; z-index: 1; }
+        .grafica-container { width: 100%; flex: 1; min-height: 400px; margin-top: 15px; }
+
+        .custom-truck-icon { background: none; border: none; }
+        .truck-marker-wrapper { background: #2196f3; color: white; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0px 2px 5px rgba(0,0,0,0.5); font-size: 16px; transition: all 0.3s ease; }
+        .truck-marker-wrapper.alerta { background: #ef4444; animation: pulsoAlerta 1s infinite; }
+
+        @keyframes pulsoAlerta {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1.08); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        .tabla { margin-top: 20px; background: #16233f; padding: 20px; border-radius: 15px; width: 100%; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #334155; padding: 12px; text-align: center; }
+        th { background: #1e3a8a; }
+        .estado-alerta-tabla { color: #fecaca; font-weight: bold; }
+
+        .leaflet-popup-content-wrapper { background: #11203d !important; color: white !important; border-radius: 10px; }
+        .leaflet-popup-tip { background: #11203d !important; }
+
+        .alerta-conductor-popup { position: fixed; top: 25px; right: 25px; width: 410px; background: linear-gradient(135deg, #7f1d1d, #dc2626); color: white; border-radius: 18px; padding: 20px; z-index: 99999; box-shadow: 0 12px 35px rgba(0, 0, 0, 0.45); border: 2px solid #fecaca; display: none; animation: entradaAlerta 0.3s ease; }
+        .alerta-conductor-popup.show { display: block; }
+        .alerta-conductor-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+        .alerta-conductor-header h3 { margin: 0; font-size: 1.2rem; font-weight: 800; }
+        .alerta-conductor-popup p { margin: 6px 0; font-size: 0.95rem; }
+        .alerta-conductor-popup .temperatura-alerta { font-size: 2rem; font-weight: 900; margin: 10px 0; }
+        .cerrar-alerta { background: rgba(255, 255, 255, 0.18); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; font-size: 18px; cursor: pointer; }
+        .cerrar-alerta:hover { background: rgba(255, 255, 255, 0.3); }
+        .aviso-sonido { margin-top: 10px; background: rgba(255, 255, 255, 0.15); padding: 8px 10px; border-radius: 10px; font-size: 0.85rem; }
+
+        @keyframes entradaAlerta {
+            from { transform: translateX(120%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @media (max-width: 1000px) { body { flex-direction: column; } .sidebar { width: 100%; min-height: auto; } .main { width: 100%; } .cards { grid-template-columns: repeat(2, 1fr); } .dashboard { grid-template-columns: 1fr; } }
+        @media (max-width: 600px) { header { flex-direction: column; align-items: flex-start; } .cards { grid-template-columns: 1fr; } .alerta-conductor-popup { width: calc(100% - 30px); right: 15px; top: 15px; } table { font-size: 0.85rem; } }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar d-flex flex-column justify-content-between text-white">
+        <div>
+            <div class="d-flex align-items-center gap-3 py-3 border-bottom border-secondary mb-4">
+                <img src="images/camion.png" alt="Avatar" class="rounded-circle" style="width: 50px; height: 50px; object-fit: cover; border: 2px solid #334155;">
+                <div>
+                    <h4 class="m-0 text-white fw-bold" style="letter-spacing: -0.5px;">Cold Chain</h4>
+                    <small class="text-muted fw-semibold">Cadena</small>
+                </div>
+            </div>
+
+            <nav id="nav" class="nav flex-column w-100">
+                <a href="index.html" class="nav-link-custom">
+                    <i class="bi bi-speedometer2 fs-5"></i> Inicio
+                </a>
+                <a href="mapa.html" class="nav-link-custom active">
+                    <i class="bi bi-geo-alt fs-5"></i> Monitoreo de Ruta
+                </a>
+                <a href="ia.html" class="nav-link-custom">
+                    <i class="bi bi-cpu fs-5"></i> Alerta de anomalías
+                </a>
+            </nav>
+        </div>
+        <div class="pt-3 border-top border-secondary mt-4">
+            <span class="d-block text-muted fw-bold" style="font-size: 0.8rem; letter-spacing: 0.5px;">TACTICAL SOLUTIONS</span>
+        </div>
+    </div>
+
+    <div class="main">
+        <header>
+            <h1>Monitoreo de Ruta (En Vivo)</h1>
+        </header>
+
+        <div class="cards">
+            <div class="card">
+                <h3><i class="fas fa-truck-moving"></i> Camiones Activos</h3>
+                <p id="totalCamiones">1</p>
+            </div>
+            <div class="card">
+                <h3><i class="fas fa-thermometer-half"></i> Temp. Actual</h3>
+                <p id="tempPromedio">--°C</p>
+            </div>
+            <div class="card">
+                <h3><i class="fas fa-exclamation-triangle"></i> Alertas</h3>
+                <p id="totalAlertas">0</p>
+            </div>
+            <div class="card">
+                <h3><i class="fas fa-road"></i> Velocidad</h3>
+                <p id="kmHoy">0 km/h</p>
+            </div>
+        </div>
+
+        <div class="dashboard">
+            <div class="mapa">
+                <h2>Mapa en Tiempo Real</h2>
+                <div id="map"></div>
+            </div>
+            <div class="grafica">
+                <h2>Temperatura del Camión</h2>
+                <div class="grafica-container">
+                    <canvas id="graficaTemp"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="tabla">
+            <h2>Estado del Camión</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Estado</th>
+                        <th>Velocidad</th>
+                        <th>Temperatura</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaCamiones">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="popupAlertaConductor" class="alerta-conductor-popup">
+        <div class="alerta-conductor-header">
+            <h3><i class="fas fa-triangle-exclamation"></i> Alerta de temperatura</h3>
+            <button class="cerrar-alerta" onclick="cerrarPopupAlerta()">×</button>
+        </div>
+        <p id="alertaCamionId">Camión: ---</p>
+        <div id="alertaTemperatura" class="temperatura-alerta">-- °C</div>
+        <p id="alertaMensaje">La temperatura del cargamento está fuera del rango seguro.</p>
+        <p><strong>Acción recomendada:</strong> revisar sistema de enfriamiento y reportar al centro de monitoreo.</p>
+        <div id="avisoSonido" class="aviso-sonido">
+            <i class="fas fa-volume-high"></i>
+            Por seguridad del navegador, toca o haz clic una vez en la pantalla para habilitar el sonido.
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        const firebaseConfig = {
+            databaseURL: "https://cadenafrio-default-rtdb.firebaseio.com"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // CONFIGURACIÓN
+        const LIMITE_TEMPERATURA_ALTA = 35; // Ajusta esto según lo que requieras
+        let map;
+        let graficaTemperatura;
+        const markersCamiones = {};
+        
+        let estelaRuta = null;
+        let coordenadasEstela = [];
+        
+        let audioContext = null;
+        let sonidoHabilitado = false;
+        const alertasVisualesMostradas = new Set();
+        const alertasSonorasReproducidas = new Set();
+        
+        // Estructura de nuestro camión real
+        let miCamion = {
+            id: "CAMION-01",
+            nombreUnidad: "Unidad Refrigerada Principal",
+            estado: "Esperando conexión...",
+            ubicacionActual: { lat: 20.659698, lng: -103.349609 }, // Centro de GDL por defecto
+            velocidadKmh: 0,
+            temperaturaActualC: 0,
+            alertaActiva: false
+        };
+
+        // 1. INICIALIZAR MAPA
+        function inicializarMapa() {
+            map = L.map("map").setView([miCamion.ubicacionActual.lat, miCamion.ubicacionActual.lng], 15);
+            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                attribution: "&copy; OpenStreetMap contributors"
+            }).addTo(map);
+
+            estelaRuta = L.polyline(coordenadasEstela, {
+                color: "#22c55e", weight: 5, opacity: 0.95, lineCap: "round", lineJoin: "round"
+            }).addTo(map);
+        }
+
+        // 2. INICIALIZAR GRÁFICA
+        function inicializarGraficaTemperatura() {
+            const ctx = document.getElementById("graficaTemp");
+            graficaTemperatura = new window.Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels: [miCamion.id],
+                    datasets: [{
+                        label: "Temperatura actual °C",
+                        data: [0],
+                        backgroundColor: ["#2196f3"],
+                        borderColor: ["#93c5fd"],
+                        borderWidth: 1, borderRadius: 8, maxBarThickness: 55
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: "#94a3b8" } } },
+                    scales: {
+                        x: { ticks: { color: "#94a3b8" }, grid: { color: "rgba(148, 163, 184, 0.15)" } },
+                        y: { beginAtZero: true, suggestedMax: 45, ticks: { color: "#94a3b8" }, grid: { color: "rgba(148, 163, 184, 0.15)" } }
+                    }
+                }
+            });
+        }
+
+        // 3. CONECTAR A FIREBASE
+        function escucharDatosFirebase() {
+            const monitoreoRef = ref(db, 'monitoreo/camion_01');
+            
+            onValue(monitoreoRef, (snapshot) => {
+                const datos = snapshot.val();
+                if (datos) procesarNuevosDatos(datos);
+            });
+        }
+
+        // 4. PROCESAR DATOS Y ACTUALIZAR UI
+        function procesarNuevosDatos(datosNube) {
+            miCamion.temperaturaActualC = (datosNube.temperatura !== "Error") ? parseFloat(datosNube.temperatura) : 0;
+            miCamion.velocidadKmh = datosNube.velocidad_kmh || 0;
+            
+            // Validar Alertas
+            miCamion.alertaActiva = miCamion.temperaturaActualC >= LIMITE_TEMPERATURA_ALTA;
+            
+            // GPS
+            if (datosNube.latitud !== "Buscando..." && datosNube.longitud !== "Buscando...") {
+                miCamion.ubicacionActual.lat = parseFloat(datosNube.latitud);
+                miCamion.ubicacionActual.lng = parseFloat(datosNube.longitud);
+                miCamion.estado = miCamion.alertaActiva ? "Alerta de Temperatura" : "En Ruta Activa";
+                
+                // Actualizar estela y mover mapa
+                const nuevaCoord = [miCamion.ubicacionActual.lat, miCamion.ubicacionActual.lng];
+                coordenadasEstela.push(nuevaCoord);
+                estelaRuta.setLatLngs(coordenadasEstela);
+                map.panTo(nuevaCoord);
+                
+                // Si hay alerta, pintar la estela de rojo
+                if (miCamion.alertaActiva) {
+                    estelaRuta.setStyle({ color: "#ef4444", weight: 6 });
+                } else {
+                    estelaRuta.setStyle({ color: "#22c55e", weight: 5 });
+                }
+            } else {
+                miCamion.estado = "Esperando señal satelital...";
+            }
+
+            actualizarMarcadorCamion();
+            actualizarTabla();
+            actualizarMetricas();
+            actualizarGraficaCamiones();
+            
+            // Disparar las notificaciones visuales y sonoras de tu código original
+            if (miCamion.alertaActiva) {
+                revisarAlertaCamion(datosNube.timestamp);
+            }
+        }
+
+        function actualizarMarcadorCamion() {
+            const posicion = [miCamion.ubicacionActual.lat, miCamion.ubicacionActual.lng];
+            const claseAlerta = miCamion.alertaActiva ? "alerta" : "";
+            
+            const icono = L.divIcon({
+                html: `<div class="truck-marker-wrapper ${claseAlerta}"><i class="fas fa-truck"></i></div>`,
+                className: "custom-truck-icon", iconSize: [38, 38], iconAnchor: [19, 19], popupAnchor: [0, -16]
+            });
+
+            const contenidoPopup = `
+                <strong style="color: #2196f3; font-size: 1.1em;">${miCamion.id}</strong><br>
+                <b style="color: #94a3b8;">Estado:</b> ${miCamion.estado}<br>
+                <b style="color: #94a3b8;">Velocidad:</b> ${miCamion.velocidadKmh} km/h<br>
+                <b style="color: #94a3b8;">Temperatura:</b> ${miCamion.temperaturaActualC} °C<br>
+            `;
+
+            if (markersCamiones[miCamion.id]) {
+                markersCamiones[miCamion.id].setLatLng(posicion);
+                markersCamiones[miCamion.id].setIcon(icono);
+                markersCamiones[miCamion.id].bindPopup(contenidoPopup);
+            } else {
+                markersCamiones[miCamion.id] = L.marker(posicion, { icon: icono }).addTo(map);
+                markersCamiones[miCamion.id].bindPopup(contenidoPopup);
+            }
+        }
+
+        function actualizarTabla() {
+            const tabla = document.getElementById("tablaCamiones");
+            tabla.innerHTML = `
+                <tr>
+                    <td>${miCamion.id}</td>
+                    <td class="${miCamion.alertaActiva ? "estado-alerta-tabla" : ""}">${miCamion.estado}</td>
+                    <td>${miCamion.velocidadKmh} km/h</td>
+                    <td>${miCamion.temperaturaActualC} °C</td>
+                </tr>
+            `;
+        }
+
+        function actualizarMetricas() {
+            document.getElementById("tempPromedio").textContent = `${miCamion.temperaturaActualC}°C`;
+            document.getElementById("totalAlertas").textContent = miCamion.alertaActiva ? "1" : "0";
+            document.getElementById("kmHoy").textContent = `${miCamion.velocidadKmh} km/h`;
+        }
+
+        function actualizarGraficaCamiones() {
+            if (!graficaTemperatura) return;
+            graficaTemperatura.data.datasets[0].data = [miCamion.temperaturaActualC];
+            graficaTemperatura.data.datasets[0].backgroundColor = [miCamion.alertaActiva ? "#ef4444" : "#2196f3"];
+            graficaTemperatura.data.datasets[0].borderColor = [miCamion.alertaActiva ? "#fecaca" : "#93c5fd"];
+            graficaTemperatura.update();
+        }
+
+        // 5. ALERTAS Y SONIDOS (Lógica conservada)
+        function revisarAlertaCamion(timestamp) {
+            // Usamos el timestamp para que no se repita la alerta por el mismo dato exacto
+            const claveAlerta = `${miCamion.id}-${timestamp}`;
+
+            if (!alertasVisualesMostradas.has(claveAlerta)) {
+                alertasVisualesMostradas.add(claveAlerta);
+                mostrarPopupAlerta();
+                if ("vibrate" in navigator) navigator.vibrate([400, 200, 400, 200, 600]);
+            }
+
+            if (sonidoHabilitado && !alertasSonorasReproducidas.has(claveAlerta)) {
+                alertasSonorasReproducidas.add(claveAlerta);
+                sonidoAlarma();
+            }
+        }
+
+        function mostrarPopupAlerta() {
+            const popup = document.getElementById("popupAlertaConductor");
+            document.getElementById("alertaCamionId").textContent = `Camión: ${miCamion.id} | Velocidad: ${miCamion.velocidadKmh} km/h`;
+            document.getElementById("alertaTemperatura").textContent = `${miCamion.temperaturaActualC} °C`;
+            popup.classList.add("show");
+            
+            setTimeout(() => { popup.classList.remove("show"); }, 8000);
+        }
+
+        // Hacemos la función global para que el botón HTML la pueda ejecutar
+        window.cerrarPopupAlerta = function() {
+            document.getElementById("popupAlertaConductor").classList.remove("show");
+        }
+
+        function prepararFuncionesDeNotificacionSinBoton() {
+            const activarFunciones = async () => {
+                try {
+                    if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    if (audioContext.state === "suspended") await audioContext.resume();
+                    
+                    sonidoHabilitado = true;
+                    const avisoSonido = document.getElementById("avisoSonido");
+                    if (avisoSonido) avisoSonido.style.display = "none";
+
+                    reproducirBeep(600, 120, 0); // Sonido de confirmación
+
+                    document.removeEventListener("click", activarFunciones);
+                } catch (error) { console.warn("No se pudo activar sonido", error); }
+            };
+            document.addEventListener("click", activarFunciones);
+        }
+
+        function sonidoAlarma() {
+            reproducirBeep(900, 250, 0);
+            reproducirBeep(700, 250, 300);
+            reproducirBeep(900, 250, 600);
+        }
+
+        function reproducirBeep(frecuencia, duracion, retraso) {
+            if (!audioContext || !sonidoHabilitado) return;
+            setTimeout(() => {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                oscillator.type = "square";
+                oscillator.frequency.setValueAtTime(frecuencia, audioContext.currentTime);
+                gainNode.gain.setValueAtTime(0.25, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duracion / 1000);
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + duracion / 1000);
+            }, retraso);
+        }
+
+        // ARRANQUE DE TODO EL SISTEMA
+        inicializarMapa();
+        inicializarGraficaTemperatura();
+        prepararFuncionesDeNotificacionSinBoton();
+        escucharDatosFirebase();
+
+    </script>
+</body>
+</html>
