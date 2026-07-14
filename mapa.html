@@ -1365,6 +1365,92 @@
     </script>
 
     <!-- ============================================================
+         ANÁLISIS PREDICTIVO DE LA IA (GEMINI) EN TIEMPO REAL
+         Este bloque escucha /monitoreo/{CAMION_ID}/analisisIA en
+         Firebase Realtime Database. Ese nodo lo escribe puente.js
+         cada vez que Gemini analiza el historial de lecturas del
+         ESP32. Cuando llega un análisis con riesgo, se dispara el
+         mismo popup/sonido/vibración/notificación que ya existía,
+         pero con el contenido que generó la IA.
+    ============================================================ -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+        // Mismo proyecto que usa puente.js para subir las lecturas del ESP32.
+        const firebaseConfigRTDB = {
+            apiKey: "AIzaSyDBXlO9v0ECZtyDXVCcx4ukLkf-rPxl0HE",
+            authDomain: "cadenafrio.firebaseapp.com",
+            databaseURL: "https://cadenafrio-default-rtdb.firebaseio.com",
+            projectId: "cadenafrio"
+        };
+
+        // ID del camión que trae el módulo IoT real conectado por puente.js.
+        // Si tienes varios camiones físicos, cambia esto (o vuélvelo dinámico).
+        const CAMION_ID_REAL = "camion_01";
+
+        const appRTDB = initializeApp(firebaseConfigRTDB, "rtdb-ia");
+        const db = getDatabase(appRTDB);
+        const refAnalisisIA = ref(db, `monitoreo/${CAMION_ID_REAL}/analisisIA`);
+
+        const nivelesConAlerta = new Set(["alerta", "critico"]);
+        const analisisIAYaMostrados = new Set();
+
+        onValue(refAnalisisIA, (snapshot) => {
+            const analisis = snapshot.val();
+            if (!analisis) return;
+
+            // Actualiza el badge del sidebar/tarjetas si existe.
+            pintarAnalisisIAEnPantalla(analisis);
+
+            if (!nivelesConAlerta.has(analisis.nivelRiesgo)) return;
+
+            // Evita repetir el mismo popup si Firebase reenvía el mismo dato.
+            const clave = `${analisis.generadoEn}-${analisis.nivelRiesgo}`;
+            if (analisisIAYaMostrados.has(clave)) return;
+            analisisIAYaMostrados.add(clave);
+
+            mostrarPopupAlertaIA(analisis, CAMION_ID_REAL);
+        });
+
+        // Muestra el popup reutilizando el mismo HTML/CSS del popup original,
+        // pero con el texto que generó Gemini (predicción + acción recomendada).
+        function mostrarPopupAlertaIA(analisis, camionId) {
+            const popup = document.getElementById("popupAlertaConductor");
+            const camionIdEl = document.getElementById("alertaCamionId");
+            const temperaturaEl = document.getElementById("alertaTemperatura");
+            const mensajeEl = document.getElementById("alertaMensaje");
+
+            camionIdEl.textContent = `Camión: ${camionId} | Riesgo IA: ${analisis.nivelRiesgo.toUpperCase()} (${analisis.probabilidadFallaPct}%)`;
+            temperaturaEl.textContent = `${analisis.temperaturaAnalizadaC ?? "--"} °C`;
+            mensajeEl.textContent = `${analisis.mensaje}  Predicción: ${analisis.prediccion}  Acción recomendada: ${analisis.accionRecomendada}`;
+
+            popup.classList.add("show");
+
+            // Reutiliza el sonido/vibración/notificación ya definidos en el
+            // script principal de esta misma página (son funciones globales).
+            if (typeof sonidoHabilitado !== "undefined" && sonidoHabilitado) {
+                sonidoAlarma();
+            }
+            if (typeof vibracionMovil === "function") vibracionMovil();
+            if (typeof notificacionNavegador === "function") {
+                notificacionNavegador(camionId, analisis.temperaturaAnalizadaC ?? "--");
+            }
+
+            setTimeout(() => popup.classList.remove("show"), 15000);
+        }
+
+        // Opcional: si agregas un elemento con id="estadoIA" en tus tarjetas,
+        // aquí se actualiza con el último nivel de riesgo que dio la IA.
+        function pintarAnalisisIAEnPantalla(analisis) {
+            const estadoIA = document.getElementById("estadoIA");
+            if (estadoIA) {
+                estadoIA.textContent = `${analisis.nivelRiesgo.toUpperCase()} (${analisis.probabilidadFallaPct}%)`;
+            }
+        }
+    </script>
+
+    <!-- ============================================================
          AUTH GUARD
          Déjalo solo si tu proyecto usa este archivo.
          Si te da error porque no existe, comenta esta línea.
