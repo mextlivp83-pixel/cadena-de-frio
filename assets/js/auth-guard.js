@@ -9,7 +9,7 @@ document.body.style.transition = "opacity 0.2s ease";
 onAuthStateChanged(auth, async (user) => {
     if (!user) {
         console.log("Acceso denegado: Sin sesión activa.");
-        window.location.href = "login.html";
+        window.location.href = "Login.html";
     } else {
         try {
             const userDocRef = doc(db, "usuarios", user.uid);
@@ -44,7 +44,7 @@ onAuthStateChanged(auth, async (user) => {
             } else {
                 console.error("El usuario no tiene documento en Firestore.");
                 await signOut(auth);
-                window.location.href = "login.html";
+                window.location.href = "Login.html";
             }
         } catch (error) {
             console.error("Error en el Guardián:", error);
@@ -109,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             try {
                 await signOut(auth);
-                window.location.href = "login.html";
+                window.location.href = "Login.html";
             } catch (error) {
                 console.error("Error al cerrar sesión:", error);
             }

@@ -3,15 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitoreo de Flota - Cadena de Frío</title>
-    
+    <title>Monitoreo de Flota - Cadena de Frío | Estela de Ruta</title>
+
+    <!-- ============================================================
+         LIBRERÍAS EXTERNAS
+         Bootstrap: estilos rápidos
+         Bootstrap Icons / FontAwesome: iconos
+         Leaflet: mapa
+         Leaflet Routing Machine: ruta siguiendo calles reales
+    ============================================================ -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+    <!-- Leaflet Routing Machine CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css">
+
     <style>
-        /* === ESTILOS BASE === */
+        /* ============================================================
+           ESTILOS BASE
+        ============================================================ */
         * {
             margin: 0;
             padding: 0;
@@ -27,19 +41,21 @@
             overflow-x: hidden;
         }
 
-        /* === BARRA LATERAL Y NAV === */
+        /* ============================================================
+           BARRA LATERAL
+        ============================================================ */
         .sidebar {
             width: 250px;
             min-height: 100vh;
-            background-color: #203057 !important; 
+            background-color: #203057 !important;
             padding: 24px;
             flex-shrink: 0;
             box-shadow: 4px 0 15px rgba(0,0,0,0.1);
         }
 
         .nav-link-custom {
-            color: #94a3b8 !important; 
-            font-size: 1.1rem; 
+            color: #94a3b8 !important;
+            font-size: 1.1rem;
             font-weight: 500;
             padding: 14px 18px;
             border-radius: 10px;
@@ -50,19 +66,21 @@
             text-decoration: none;
             margin-bottom: 8px;
         }
-        
+
         .nav-link-custom:hover {
             background-color: #1e293b;
             color: #3d5f99 !important;
         }
-        
+
         .nav-link-custom.active {
             background-color: #1e293b;
-            color: #f8fafc !important; 
+            color: #f8fafc !important;
             border-left: 5px solid #3b82f6;
         }
 
-        /* === CONTENIDO PRINCIPAL === */
+        /* ============================================================
+           CONTENIDO PRINCIPAL
+        ============================================================ */
         .main {
             flex: 1;
             padding: 20px;
@@ -75,15 +93,13 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 15px;
             margin-bottom: 20px;
         }
 
-        .online {
-            color: #00ff55;
-            font-weight: bold;
-        }
-
-        /* === TARJETAS DE MÉTRICAS CORREGIDAS === */
+        /* ============================================================
+           TARJETAS DE MÉTRICAS
+        ============================================================ */
         .cards {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -96,7 +112,7 @@
             background: #16233f;
             padding: 20px;
             border-radius: 15px;
-            border: none; /* Quita el borde por defecto de Bootstrap */
+            border: none;
         }
 
         .card h3 {
@@ -105,26 +121,28 @@
             gap: 10px;
             font-size: 1.05rem;
             margin-bottom: 10px;
-            color: #94a3b8 !important; /* Gris claro legible para el título de la métrica */
+            color: #94a3b8 !important;
             font-weight: 600;
         }
 
         .card h3 i {
-            color: #3b82f6 !important; /* Iconos en azul brillante */
+            color: #3b82f6 !important;
         }
 
         .card p {
             font-size: 30px;
             font-weight: bold;
             margin: 0;
-            color: #ffffff !important; /* Letras y números grandes en blanco puro */
+            color: #ffffff !important;
         }
 
-        /* === DASHBOARD Y MAPA === */
+        /* ============================================================
+           DASHBOARD: MAPA Y GRÁFICA
+        ============================================================ */
         .dashboard {
             display: grid;
-            grid-template-columns: 65% calc(35% - 15px); 
-            gap: 15px; 
+            grid-template-columns: 65% calc(35% - 15px);
+            gap: 15px;
             width: 100%;
         }
 
@@ -138,41 +156,75 @@
 
         #map {
             width: 100%;
-            height: 400px;
+            height: 430px;
             margin-top: 10px;
             border-radius: 10px;
             z-index: 1;
         }
 
+        .grafica-container {
+            width: 100%;
+            flex: 1;
+            min-height: 400px;
+            margin-top: 15px;
+        }
+
+        /* ============================================================
+           OCULTAR PANEL DE INSTRUCCIONES DE RUTA
+           Leaflet Routing Machine muestra un panel blanco de instrucciones.
+           Aquí lo ocultamos para que solo se vea la ruta en el mapa.
+        ============================================================ */
+        .leaflet-routing-container {
+            display: none !important;
+        }
+
+        /* ============================================================
+           MARCADOR PERSONALIZADO DEL CAMIÓN
+        ============================================================ */
         .custom-truck-icon {
             background: none;
             border: none;
         }
-        
+
         .truck-marker-wrapper {
             background: #2196f3;
             color: white;
-            width: 34px;
-            height: 34px;
+            width: 38px;
+            height: 38px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             border: 2px solid white;
             box-shadow: 0px 2px 5px rgba(0,0,0,0.5);
+            font-size: 16px;
         }
 
         .truck-marker-wrapper.alerta {
-            background: #ef4444; 
+            background: #ef4444;
+            animation: pulsoAlerta 1s infinite;
         }
 
-        .grafica-container {
-            width: 100%;
-            flex: 1;
-            min-height: 380px; 
-            margin-top: 15px;
+        @keyframes pulsoAlerta {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            }
+
+            70% {
+                transform: scale(1.08);
+                box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+            }
+
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
         }
 
+        /* ============================================================
+           TABLA
+        ============================================================ */
         .tabla {
             margin-top: 20px;
             background: #16233f;
@@ -197,18 +249,162 @@
             background: #1e3a8a;
         }
 
+        .estado-alerta-tabla {
+            color: #fecaca;
+            font-weight: bold;
+        }
+
+        /* ============================================================
+           POPUP DE LEAFLET
+        ============================================================ */
         .leaflet-popup-content-wrapper {
             background: #11203d !important;
             color: white !important;
             border-radius: 10px;
         }
+
         .leaflet-popup-tip {
             background: #11203d !important;
         }
+
+        /* ============================================================
+           POP-UP DE ALERTA PARA EL CONDUCTOR
+           Este pop-up sale automáticamente.
+           No hay botón visible de notificaciones.
+        ============================================================ */
+        .alerta-conductor-popup {
+            position: fixed;
+            top: 25px;
+            right: 25px;
+            width: 410px;
+            background: linear-gradient(135deg, #7f1d1d, #dc2626);
+            color: white;
+            border-radius: 18px;
+            padding: 20px;
+            z-index: 99999;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.45);
+            border: 2px solid #fecaca;
+            display: none;
+            animation: entradaAlerta 0.3s ease;
+        }
+
+        .alerta-conductor-popup.show {
+            display: block;
+        }
+
+        .alerta-conductor-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .alerta-conductor-header h3 {
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 800;
+        }
+
+        .alerta-conductor-popup p {
+            margin: 6px 0;
+            font-size: 0.95rem;
+        }
+
+        .alerta-conductor-popup .temperatura-alerta {
+            font-size: 2rem;
+            font-weight: 900;
+            margin: 10px 0;
+        }
+
+        .cerrar-alerta {
+            background: rgba(255, 255, 255, 0.18);
+            border: none;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        .cerrar-alerta:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .aviso-sonido {
+            margin-top: 10px;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 8px 10px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+        }
+
+        @keyframes entradaAlerta {
+            from {
+                transform: translateX(120%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* ============================================================
+           RESPONSIVE
+        ============================================================ */
+        @media (max-width: 1000px) {
+            body {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                min-height: auto;
+            }
+
+            .main {
+                width: 100%;
+            }
+
+            .cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 600px) {
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .cards {
+                grid-template-columns: 1fr;
+            }
+
+            .alerta-conductor-popup {
+                width: calc(100% - 30px);
+                right: 15px;
+                top: 15px;
+            }
+
+            table {
+                font-size: 0.85rem;
+            }
+        }
     </style>
 </head>
-<body>
 
+<body>
+    <!-- ============================================================
+         SIDEBAR
+    ============================================================ -->
     <div class="sidebar d-flex flex-column justify-content-between text-white">
         <div>
             <div class="d-flex align-items-center gap-3 py-3 border-bottom border-secondary mb-4">
@@ -221,19 +417,23 @@
 
             <nav id="nav" class="nav flex-column w-100">
                 <a href="index.html" class="nav-link-custom">
-                    <i class="bi bi-speedometer2 fs-5"></i> Inicio 
+                    <i class="bi bi-speedometer2 fs-5"></i> Inicio
                 </a>
+
                 <a href="mapa.html" class="nav-link-custom active">
                     <i class="bi bi-geo-alt fs-5"></i> Monitoreo de Ruta
                 </a>
+
                 <a href="ia.html" class="nav-link-custom">
-                    <i class="bi bi-cpu fs-5"></i> Alerta de anomalias 
+                    <i class="bi bi-cpu fs-5"></i> Alerta de anomalías
                 </a>
+
                 <div class="restringido-operator w-100">
                     <a href="/catalogo.html" class="nav-link-custom">
                         <i class="bi bi-folder2-open fs-5"></i> Catálogo
                     </a>
                 </div>
+
                 <div class="restringido-operator w-100">
                     <a href="reportes.html" class="nav-link-custom">
                         <i class="bi bi-file-earmark-bar-graph fs-5"></i> Auditoría y Reportes
@@ -247,31 +447,42 @@
         </div>
     </div>
 
+    <!-- ============================================================
+         CONTENIDO PRINCIPAL
+    ============================================================ -->
     <div class="main">
         <header>
             <h1>Monitoreo de Ruta</h1>
-            
         </header>
 
+        <!-- ============================================================
+             TARJETAS DE MÉTRICAS
+        ============================================================ -->
         <div class="cards">
             <div class="card">
                 <h3><i class="fas fa-truck-moving"></i> Camiones Activos</h3>
-                <p>5</p>
+                <p id="totalCamiones">0</p>
             </div>
+
             <div class="card">
                 <h3><i class="fas fa-thermometer-half"></i> Temperatura Promedio</h3>
-                <p>4.6°C</p>
+                <p id="tempPromedio">0°C</p>
             </div>
+
             <div class="card">
                 <h3><i class="fas fa-exclamation-triangle"></i> Alertas</h3>
-                <p>1</p>
+                <p id="totalAlertas">0</p>
             </div>
+
             <div class="card">
                 <h3><i class="fas fa-road"></i> Km Hoy</h3>
-                <p>256 km</p>
+                <p id="kmHoy">0 km</p>
             </div>
         </div>
 
+        <!-- ============================================================
+             MAPA Y GRÁFICA
+        ============================================================ -->
         <div class="dashboard">
             <div class="mapa">
                 <h2>Mapa en Tiempo Real</h2>
@@ -279,15 +490,19 @@
             </div>
 
             <div class="grafica">
-                <h2>Temperatura</h2>
+                <h2>Temperatura por Camión</h2>
                 <div class="grafica-container">
                     <canvas id="graficaTemp"></canvas>
                 </div>
             </div>
         </div>
 
+        <!-- ============================================================
+             TABLA DE CAMIONES
+        ============================================================ -->
         <div class="tabla">
             <h2>Estado de los Camiones</h2>
+
             <table>
                 <thead>
                     <tr>
@@ -297,111 +512,863 @@
                         <th>Temperatura</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <tr>
-                        <td>CAM-01</td>
-                        <td>En movimiento</td>
-                        <td>65 km/h</td>
-                        <td>4.5°C</td>
-                    </tr>
-                    <tr>
-                        <td>CAM-02</td>
-                        <td>En movimiento</td>
-                        <td>55 km/h</td>
-                        <td>3.2°C</td>
-                    </tr>
-                    <tr>
-                        <td>CAM-03</td>
-                        <td>En movimiento</td>
-                        <td>40 km/h</td>
-                        <td>5.1°C</td>
-                    </tr>
-                    <tr>
-                        <td>CAM-04</td>
-                        <td>Estacionado</td>
-                        <td>0 km/h</td>
-                        <td>4.8°C</td>
-                    </tr>
-                    <tr>
-                        <td>CAM-05</td>
-                        <td>Alerta - Temp Elevada</td>
-                        <td>12 km/h</td>
-                        <td>5.8°C</td>
-                    </tr>
+
+                <tbody id="tablaCamiones">
+                    <!-- JavaScript llena esta tabla -->
                 </tbody>
             </table>
         </div>
     </div>
 
+    <!-- ============================================================
+         POP-UP AUTOMÁTICO DEL CONDUCTOR
+         No hay botón visible de notificaciones.
+         El pop-up aparece solo cuando se detecta una alerta.
+    ============================================================ -->
+    <div id="popupAlertaConductor" class="alerta-conductor-popup">
+        <div class="alerta-conductor-header">
+            <h3><i class="fas fa-triangle-exclamation"></i> Alerta de temperatura</h3>
+            <button class="cerrar-alerta" onclick="cerrarPopupAlerta()">×</button>
+        </div>
+
+        <p id="alertaCamionId">Camión: ---</p>
+        <div id="alertaTemperatura" class="temperatura-alerta">-- °C</div>
+        <p id="alertaMensaje">La temperatura del cargamento está fuera del rango seguro.</p>
+        <p><strong>Acción recomendada:</strong> revisar sistema de enfriamiento y reportar al centro de monitoreo.</p>
+
+        <div id="avisoSonido" class="aviso-sonido">
+            <i class="fas fa-volume-high"></i>
+            Por seguridad del navegador, toca o haz clic una vez en la pantalla para habilitar el sonido.
+        </div>
+    </div>
+
+    <!-- ============================================================
+         LIBRERÍAS JAVASCRIPT
+    ============================================================ -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- ============================================================
+         SCRIPT PRINCIPAL
+    ============================================================ -->
     <script>
-        const map = L.map('map').setView([20.659698, -103.349609], 11);
+        /* ============================================================
+           CONFIGURACIÓN GENERAL
+        ============================================================ */
+        const LIMITE_TEMPERATURA_ALTA = 5.5;
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors'
-        }).addTo(map);
+        // Cada cuánto se mueve el camión.
+        const INTERVALO_MOVIMIENTO_MS = 1800;
 
+        // Cada cuántos puntos de la ruta calculada avanza.
+        // Si lo subes, avanza más rápido.
+        const PASO_COORDENADAS = 8;
+
+        /* ============================================================
+           DATOS SIMULADOS COMO SI VINIERAN DE FIREBASE
+
+           En Firebase, esto sería:
+           colección: camiones
+           documento: CAM-05
+        ============================================================ */
         const camiones = [
-            { id: "CAM-01", lat: 20.6736, lng: -103.3444, estado: "En movimiento", vel: "65 km/h", temp: "4.5°C", Alerta: false },
-            { id: "CAM-02", lat: 20.6420, lng: -103.4100, estado: "En movimiento", vel: "55 km/h", temp: "3.2°C", Alerta: false },
-            { id: "CAM-03", lat: 20.7000, lng: -103.3000, estado: "En movimiento", vel: "40 km/h", temp: "5.1°C", Alerta: false },
-            { id: "CAM-04", lat: 20.6100, lng: -103.3500, estado: "Estacionado", vel: "0 km/h", temp: "4.8°C", Alerta: false },
-            { id: "CAM-05", lat: 20.6650, lng: -103.3800, estado: "Alerta - Temp Elevada", vel: "12 km/h", temp: "5.8°C", Alerta: true }
+            {
+                id: "CAM-01",
+                nombreUnidad: "Unidad Refrigerada 01",
+                placa: "JAL-101",
+                estado: "En movimiento",
+                activo: true,
+                conductorId: "COND-01",
+                envioId: null,
+                ubicacionActual: {
+                    lat: 20.6736,
+                    lng: -103.3444
+                },
+                velocidadKmh: 65,
+                temperaturaActualC: 4.5,
+                humedadActualPct: 58,
+                puertaAbierta: false,
+                alertaActiva: false,
+                nivelAlerta: "normal",
+                kmRecorridosHoy: 65
+            },
+            {
+                id: "CAM-02",
+                nombreUnidad: "Unidad Refrigerada 02",
+                placa: "JAL-202",
+                estado: "En movimiento",
+                activo: true,
+                conductorId: "COND-02",
+                envioId: null,
+                ubicacionActual: {
+                    lat: 20.6420,
+                    lng: -103.4100
+                },
+                velocidadKmh: 55,
+                temperaturaActualC: 3.2,
+                humedadActualPct: 55,
+                puertaAbierta: false,
+                alertaActiva: false,
+                nivelAlerta: "normal",
+                kmRecorridosHoy: 57
+            },
+            {
+                id: "CAM-03",
+                nombreUnidad: "Unidad Refrigerada 03",
+                placa: "JAL-303",
+                estado: "En movimiento",
+                activo: true,
+                conductorId: "COND-03",
+                envioId: null,
+                ubicacionActual: {
+                    lat: 20.7000,
+                    lng: -103.3000
+                },
+                velocidadKmh: 40,
+                temperaturaActualC: 5.1,
+                humedadActualPct: 61,
+                puertaAbierta: false,
+                alertaActiva: false,
+                nivelAlerta: "normal",
+                kmRecorridosHoy: 43
+            },
+            {
+                id: "CAM-04",
+                nombreUnidad: "Unidad Refrigerada 04",
+                placa: "JAL-404",
+                estado: "Estacionado",
+                activo: true,
+                conductorId: "COND-04",
+                envioId: null,
+                ubicacionActual: {
+                    lat: 20.6100,
+                    lng: -103.3500
+                },
+                velocidadKmh: 0,
+                temperaturaActualC: 4.8,
+                humedadActualPct: 59,
+                puertaAbierta: false,
+                alertaActiva: false,
+                nivelAlerta: "normal",
+                kmRecorridosHoy: 28
+            },
+            {
+                id: "CAM-05",
+                nombreUnidad: "Unidad Refrigerada 05",
+                placa: "JAL-505",
+                estado: "En ruta",
+                activo: true,
+                conductorId: "COND-05",
+                envioId: "ENV-001",
+                ubicacionActual: {
+                    lat: 20.6420,
+                    lng: -103.4100
+                },
+                velocidadKmh: 25,
+                temperaturaActualC: 4.2,
+                humedadActualPct: 60,
+                puertaAbierta: false,
+                alertaActiva: false,
+                nivelAlerta: "normal",
+                kmRecorridosHoy: 10
+            }
         ];
 
-        camiones.forEach(camion => {
-            const claseAlerta = camion.Alerta ? 'alerta' : '';
+        /* ============================================================
+           PUNTOS GUÍA DE LA RUTA CAM-05
 
-            const truckIcon = L.divIcon({
+           Estos puntos NO se dibujan en línea recta.
+           Leaflet Routing Machine + OSRM calcula el camino real
+           sobre calles entre estos puntos.
+
+           En Firebase esto podría venir de:
+           colección: rutas
+           documento: RUTA-001
+        ============================================================ */
+        const puntosGuiaCAM05 = [
+            [20.6420, -103.4100],
+            [20.6530, -103.3990],
+            [20.6650, -103.3800],
+            [20.6760, -103.3680],
+            [20.6870, -103.3540]
+        ];
+
+        /* ============================================================
+           VARIABLES GLOBALES
+        ============================================================ */
+        let map;
+        let graficaTemperatura;
+
+        const markersCamiones = {};
+
+        let controlRutaCAM05 = null;
+        let coordenadasRutaRealCAM05 = [];
+        let indiceRutaRealCAM05 = 0;
+        let intervaloMovimientoCAM05 = null;
+
+        // Estela real del trayecto ya recorrido por CAM-05.
+        // Esta línea inicia vacía y se va dibujando punto por punto
+        // conforme el camión avanza.
+        let estelaRutaCAM05 = null;
+        let coordenadasEstelaCAM05 = [];
+
+        let audioContext = null;
+        let sonidoHabilitado = false;
+
+        const alertasVisualesMostradas = new Set();
+        const alertasSonorasReproducidas = new Set();
+        const notificacionesMostradas = new Set();
+
+        /* ============================================================
+           INICIALIZAR MAPA
+        ============================================================ */
+        function inicializarMapa() {
+            map = L.map("map").setView([20.659698, -103.349609], 12);
+
+            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                attribution: "&copy; OpenStreetMap contributors"
+            }).addTo(map);
+
+            inicializarEstelaCAM05();
+        }
+
+        /* ============================================================
+           INICIALIZAR ESTELA DEL CAMIÓN
+
+           La estela empieza vacía.
+           No muestra la ruta completa desde el inicio.
+           Solo se va llenando con las coordenadas que el camión
+           ya recorrió.
+        ============================================================ */
+        function inicializarEstelaCAM05() {
+            coordenadasEstelaCAM05 = [];
+
+            estelaRutaCAM05 = L.polyline(coordenadasEstelaCAM05, {
+                color: "#22c55e",
+                weight: 5,
+                opacity: 0.95,
+                lineCap: "round",
+                lineJoin: "round"
+            }).addTo(map);
+        }
+
+        /* ============================================================
+           SABER SI UN CAMIÓN TIENE ALERTA
+        ============================================================ */
+        function camionTieneAlerta(camion) {
+            const temperatura = Number(camion.temperaturaActualC);
+            return camion.alertaActiva === true || temperatura >= LIMITE_TEMPERATURA_ALTA;
+        }
+
+        /* ============================================================
+           CREAR ICONO DEL CAMIÓN
+
+           Azul = normal
+           Rojo = alerta
+        ============================================================ */
+        function crearIconoCamion(tieneAlerta) {
+            const claseAlerta = tieneAlerta ? "alerta" : "";
+
+            return L.divIcon({
                 html: `<div class="truck-marker-wrapper ${claseAlerta}"><i class="fas fa-truck"></i></div>`,
-                className: 'custom-truck-icon',
-                iconSize: [34, 34],
-                iconAnchor: [17, 17],
-                popupAnchor: [0, -15]
+                className: "custom-truck-icon",
+                iconSize: [38, 38],
+                iconAnchor: [19, 19],
+                popupAnchor: [0, -16]
+            });
+        }
+
+        /* ============================================================
+           CARGAR CAMIONES EN EL MAPA
+        ============================================================ */
+        function cargarCamionesEnMapa() {
+            camiones.forEach(camion => {
+                actualizarMarcadorCamion(camion);
+            });
+        }
+
+        /* ============================================================
+           ACTUALIZAR O CREAR MARCADOR DEL CAMIÓN
+        ============================================================ */
+        function actualizarMarcadorCamion(camion) {
+            const posicion = [
+                camion.ubicacionActual.lat,
+                camion.ubicacionActual.lng
+            ];
+
+            const tieneAlerta = camionTieneAlerta(camion);
+            const icono = crearIconoCamion(tieneAlerta);
+
+            const contenidoPopup = `
+                <strong style="color: #2196f3; font-size: 1.1em;">${camion.id}</strong><br>
+                <b style="color: #94a3b8;">Unidad:</b> ${camion.nombreUnidad}<br>
+                <b style="color: #94a3b8;">Estado:</b> ${camion.estado}<br>
+                <b style="color: #94a3b8;">Velocidad:</b> ${camion.velocidadKmh} km/h<br>
+                <b style="color: #94a3b8;">Temperatura:</b> ${camion.temperaturaActualC} °C<br>
+                <b style="color: #94a3b8;">Alerta:</b> ${tieneAlerta ? "Sí" : "No"}
+            `;
+
+            if (markersCamiones[camion.id]) {
+                markersCamiones[camion.id].setLatLng(posicion);
+                markersCamiones[camion.id].setIcon(icono);
+                markersCamiones[camion.id].bindPopup(contenidoPopup);
+            } else {
+                markersCamiones[camion.id] = L.marker(posicion, { icon: icono }).addTo(map);
+                markersCamiones[camion.id].bindPopup(contenidoPopup);
+            }
+        }
+
+        /* ============================================================
+           INICIAR SIMULACIÓN SOBRE CALLES REALES
+
+           Aquí OSRM calcula la ruta real sobre calles.
+           Cuando encuentra la ruta, se llama a iniciarMovimientoSobreRutaReal().
+        ============================================================ */
+        function iniciarSimulacionMovimientoCAM05() {
+            const waypoints = puntosGuiaCAM05.map(punto => {
+                return L.latLng(punto[0], punto[1]);
             });
 
-            const marker = L.marker([camion.lat, camion.lng], { icon: truckIcon }).addTo(map);
-            
-            marker.bindPopup(`
-                <strong style="color: #2196f3; font-size: 1.1em;">${camion.id}</strong><br>
-                <b style="color: #94a3b8;">Estado:</b> ${camion.estado}<br>
-                <b style="color: #94a3b8;">Velocidad:</b> ${camion.vel}<br>
-                <b style="color: #94a3b8;">Temp:</b> ${camion.temp}
+            controlRutaCAM05 = L.Routing.control({
+                waypoints: waypoints,
+                routeWhileDragging: false,
+                addWaypoints: false,
+                draggableWaypoints: false,
+                fitSelectedRoutes: true,
+                show: false,
+                createMarker: function () {
+                    return null;
+                },
+                // IMPORTANTE:
+                // Leaflet Routing Machine se usa solo para calcular las calles reales,
+                // pero la línea completa de la ruta queda invisible.
+                // Lo visible será únicamente la estela del camino ya recorrido.
+                lineOptions: {
+                    styles: [
+                        {
+                            color: "transparent",
+                            weight: 0,
+                            opacity: 0
+                        }
+                    ]
+                }
+            }).addTo(map);
+
+            controlRutaCAM05.on("routesfound", function (event) {
+                const ruta = event.routes[0];
+
+                coordenadasRutaRealCAM05 = ruta.coordinates.map(coord => {
+                    return {
+                        lat: coord.lat,
+                        lng: coord.lng
+                    };
+                });
+
+                console.log("Ruta real calculada:", coordenadasRutaRealCAM05.length, "puntos");
+
+                iniciarMovimientoSobreRutaReal();
+            });
+
+            controlRutaCAM05.on("routingerror", function (error) {
+                console.warn("No se pudo calcular ruta por calles. Se usará ruta simple.", error);
+
+                coordenadasRutaRealCAM05 = puntosGuiaCAM05.map(punto => {
+                    return {
+                        lat: punto[0],
+                        lng: punto[1]
+                    };
+                });
+
+                iniciarMovimientoSobreRutaReal();
+            });
+        }
+
+        /* ============================================================
+           ESTA FUNCIÓN FALTABA EN TU CÓDIGO
+
+           Inicia el intervalo que mueve el camión sobre la ruta calculada.
+        ============================================================ */
+        function iniciarMovimientoSobreRutaReal() {
+            if (!coordenadasRutaRealCAM05.length) {
+                console.warn("No hay coordenadas para mover el camión.");
+                return;
+            }
+
+            moverCAM05SobreRutaReal();
+
+            intervaloMovimientoCAM05 = setInterval(() => {
+                moverCAM05SobreRutaReal();
+            }, INTERVALO_MOVIMIENTO_MS);
+        }
+
+        /* ============================================================
+           MOVER CAM-05 SOBRE LAS CALLES
+
+           Cada movimiento toma una coordenada real de la ruta.
+           También simula temperatura, humedad y velocidad.
+
+           En Firebase esto equivaldría a:
+           1. Actualizar camiones / CAM-05
+           2. Crear una lectura en camiones / CAM-05 / lecturas
+        ============================================================ */
+        function moverCAM05SobreRutaReal() {
+            if (indiceRutaRealCAM05 >= coordenadasRutaRealCAM05.length) {
+                clearInterval(intervaloMovimientoCAM05);
+                console.log("Simulación finalizada.");
+                return;
+            }
+
+            const punto = coordenadasRutaRealCAM05[indiceRutaRealCAM05];
+            const camion = camiones.find(item => item.id === "CAM-05");
+
+            if (!camion) return;
+
+            const porcentajeRuta = indiceRutaRealCAM05 / coordenadasRutaRealCAM05.length;
+
+            let temperaturaSimulada = 4.2;
+
+            if (porcentajeRuta > 0.35 && porcentajeRuta <= 0.55) {
+                temperaturaSimulada = 5.1;
+            } else if (porcentajeRuta > 0.55 && porcentajeRuta <= 0.8) {
+                temperaturaSimulada = 5.8;
+            } else if (porcentajeRuta > 0.8) {
+                temperaturaSimulada = 6.2;
+            }
+
+            const alerta = temperaturaSimulada >= LIMITE_TEMPERATURA_ALTA;
+
+            const lectura = {
+                lat: punto.lat,
+                lng: punto.lng,
+                temperaturaC: temperaturaSimulada,
+                humedadPct: alerta ? 63 : 60,
+                velocidadKmh: alerta ? 30 : 42,
+                hora: obtenerHoraSimulada(),
+                kmRecorridosHoy: Math.round(10 + porcentajeRuta * 45)
+            };
+
+            camion.ubicacionActual = {
+                lat: lectura.lat,
+                lng: lectura.lng
+            };
+
+            camion.velocidadKmh = lectura.velocidadKmh;
+            camion.temperaturaActualC = lectura.temperaturaC;
+            camion.humedadActualPct = lectura.humedadPct;
+            camion.kmRecorridosHoy = lectura.kmRecorridosHoy;
+            camion.alertaActiva = alerta;
+            camion.nivelAlerta = alerta ? "media" : "normal";
+            camion.estado = alerta ? "Alerta - Temperatura elevada" : "En ruta";
+
+            // Primero se agrega la coordenada a la estela.
+            // Así la línea solo aparece detrás del camión, no antes.
+            agregarPuntoAEstelaCAM05(lectura);
+
+            dibujarPuntoDeLecturaCAM05(lectura, indiceRutaRealCAM05);
+            actualizarMarcadorCamion(camion);
+
+            map.panTo([lectura.lat, lectura.lng]);
+
+            cargarTablaCamiones();
+            actualizarMetricas();
+            actualizarGraficaCamiones();
+            revisarAlertaCamion(camion, lectura);
+
+            indiceRutaRealCAM05 += PASO_COORDENADAS;
+        }
+
+        /* ============================================================
+           AGREGAR PUNTO A LA ESTELA DE CAM-05
+
+           Esta función representa lo que pasaría con un sensor GPS real:
+           cada lectura nueva se agrega al arreglo y la línea se actualiza.
+
+           En Firebase podrías guardar cada punto en:
+           camiones / CAM-05 / historialUbicaciones
+        ============================================================ */
+        function agregarPuntoAEstelaCAM05(lectura) {
+            if (!estelaRutaCAM05) return;
+
+            const nuevaCoordenada = [lectura.lat, lectura.lng];
+            coordenadasEstelaCAM05.push(nuevaCoordenada);
+
+            estelaRutaCAM05.setLatLngs(coordenadasEstelaCAM05);
+
+            // Cuando ya hay alerta, la estela cambia a rojo para indicar
+            // que el recorrido reciente ocurrió con temperatura elevada.
+            if (lectura.temperaturaC >= LIMITE_TEMPERATURA_ALTA) {
+                estelaRutaCAM05.setStyle({
+                    color: "#ef4444",
+                    weight: 6,
+                    opacity: 0.95
+                });
+            }
+        }
+
+        /* ============================================================
+           DIBUJAR PUNTOS DE LECTURA GPS
+
+           La ruta completa ya NO se dibuja desde el inicio.
+           La línea visible es la estela que se va formando con agregarPuntoAEstelaCAM05().
+           Estos puntos representan las lecturas que el camión va dejando.
+
+           Azul = lectura normal
+           Rojo = lectura con alerta
+        ============================================================ */
+        function dibujarPuntoDeLecturaCAM05(lectura, indice) {
+            const hayAlerta = lectura.temperaturaC >= LIMITE_TEMPERATURA_ALTA;
+
+            L.circleMarker([lectura.lat, lectura.lng], {
+                radius: hayAlerta ? 7 : 5,
+                color: hayAlerta ? "#ef4444" : "#38bdf8",
+                fillColor: hayAlerta ? "#ef4444" : "#38bdf8",
+                fillOpacity: 0.9,
+                weight: 2
+            }).addTo(map).bindPopup(`
+                <strong>${indice === 0 ? "Inicio de ruta" : "Lectura GPS"}</strong><br>
+                <b>Camión:</b> CAM-05<br>
+                <b>Hora:</b> ${lectura.hora}<br>
+                <b>Temperatura:</b> ${lectura.temperaturaC} °C<br>
+                <b>Velocidad:</b> ${lectura.velocidadKmh} km/h<br>
+                <b>Estado:</b> ${hayAlerta ? "Alerta de temperatura" : "Normal"}
             `);
-        });
+        }
+
+        /* ============================================================
+           HORA SIMULADA PARA CADA LECTURA
+
+           En Firebase esto sería un timestamp real.
+        ============================================================ */
+        function obtenerHoraSimulada() {
+            const ahora = new Date();
+
+            const horas = String(ahora.getHours()).padStart(2, "0");
+            const minutos = String(ahora.getMinutes()).padStart(2, "0");
+            const segundos = String(ahora.getSeconds()).padStart(2, "0");
+
+            return `${horas}:${minutos}:${segundos}`;
+        }
+
+        /* ============================================================
+           TABLA DE CAMIONES
+        ============================================================ */
+        function cargarTablaCamiones() {
+            const tabla = document.getElementById("tablaCamiones");
+            tabla.innerHTML = "";
+
+            camiones.forEach(camion => {
+                const tieneAlerta = camionTieneAlerta(camion);
+
+                const fila = document.createElement("tr");
+
+                fila.innerHTML = `
+                    <td>${camion.id}</td>
+                    <td class="${tieneAlerta ? "estado-alerta-tabla" : ""}">
+                        ${camion.estado}
+                    </td>
+                    <td>${camion.velocidadKmh} km/h</td>
+                    <td>${camion.temperaturaActualC} °C</td>
+                `;
+
+                tabla.appendChild(fila);
+            });
+        }
+
+        /* ============================================================
+           MÉTRICAS SUPERIORES
+        ============================================================ */
+        function actualizarMetricas() {
+            const totalCamiones = camiones.filter(camion => camion.activo).length;
+            const totalAlertas = camiones.filter(camion => camionTieneAlerta(camion)).length;
+
+            const sumaTemperaturas = camiones.reduce((total, camion) => {
+                return total + Number(camion.temperaturaActualC);
+            }, 0);
+
+            const promedio = sumaTemperaturas / camiones.length;
+
+            const kmTotales = camiones.reduce((total, camion) => {
+                return total + Number(camion.kmRecorridosHoy || 0);
+            }, 0);
+
+            document.getElementById("totalCamiones").textContent = totalCamiones;
+            document.getElementById("totalAlertas").textContent = totalAlertas;
+            document.getElementById("tempPromedio").textContent = `${promedio.toFixed(1)}°C`;
+            document.getElementById("kmHoy").textContent = `${kmTotales} km`;
+        }
+
+        /* ============================================================
+           GRÁFICA DE BARRAS POR CAMIÓN
+        ============================================================ */
+        function inicializarGraficaTemperatura() {
+            const ctx = document.getElementById("graficaTemp");
+
+            graficaTemperatura = new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels: camiones.map(camion => camion.id),
+                    datasets: [{
+                        label: "Temperatura actual °C",
+                        data: camiones.map(camion => Number(camion.temperaturaActualC)),
+                        backgroundColor: camiones.map(camion => {
+                            return camionTieneAlerta(camion) ? "#ef4444" : "#2196f3";
+                        }),
+                        borderColor: camiones.map(camion => {
+                            return camionTieneAlerta(camion) ? "#fecaca" : "#93c5fd";
+                        }),
+                        borderWidth: 1,
+                        borderRadius: 8,
+                        maxBarThickness: 55
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: "#94a3b8"
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    const camion = camiones[context.dataIndex];
+                                    return `${camion.id}: ${camion.temperaturaActualC} °C | ${camion.estado}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: "#94a3b8"
+                            },
+                            grid: {
+                                color: "rgba(148, 163, 184, 0.15)"
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            suggestedMax: 8,
+                            ticks: {
+                                color: "#94a3b8",
+                                callback: function (value) {
+                                    return `${value} °C`;
+                                }
+                            },
+                            grid: {
+                                color: "rgba(148, 163, 184, 0.15)"
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function actualizarGraficaCamiones() {
+            if (!graficaTemperatura) return;
+
+            graficaTemperatura.data.labels = camiones.map(camion => camion.id);
+            graficaTemperatura.data.datasets[0].data = camiones.map(camion => Number(camion.temperaturaActualC));
+
+            graficaTemperatura.data.datasets[0].backgroundColor = camiones.map(camion => {
+                return camionTieneAlerta(camion) ? "#ef4444" : "#2196f3";
+            });
+
+            graficaTemperatura.data.datasets[0].borderColor = camiones.map(camion => {
+                return camionTieneAlerta(camion) ? "#fecaca" : "#93c5fd";
+            });
+
+            graficaTemperatura.update();
+        }
+
+        /* ============================================================
+           ALERTAS AUTOMÁTICAS SIN BOTÓN
+        ============================================================ */
+        function revisarAlertaCamion(camion, lectura) {
+            if (!camionTieneAlerta(camion)) return;
+
+            const claveAlerta = `${camion.id}-${lectura.hora}-${camion.temperaturaActualC}`;
+
+            if (!alertasVisualesMostradas.has(claveAlerta)) {
+                alertasVisualesMostradas.add(claveAlerta);
+                mostrarPopupAlerta(camion, lectura);
+                vibracionMovil();
+            }
+
+            if (sonidoHabilitado && !alertasSonorasReproducidas.has(claveAlerta)) {
+                alertasSonorasReproducidas.add(claveAlerta);
+                sonidoAlarma();
+            }
+
+            if (
+                "Notification" in window &&
+                Notification.permission === "granted" &&
+                !notificacionesMostradas.has(claveAlerta)
+            ) {
+                notificacionesMostradas.add(claveAlerta);
+                notificacionNavegador(camion.id, camion.temperaturaActualC);
+            }
+        }
+
+        function mostrarPopupAlerta(camion, lectura) {
+            const popup = document.getElementById("popupAlertaConductor");
+            const camionId = document.getElementById("alertaCamionId");
+            const temperatura = document.getElementById("alertaTemperatura");
+            const mensaje = document.getElementById("alertaMensaje");
+
+            camionId.textContent = `Camión: ${camion.id} | Velocidad: ${camion.velocidadKmh} km/h | Hora: ${lectura.hora}`;
+            temperatura.textContent = `${camion.temperaturaActualC} °C`;
+
+            mensaje.textContent =
+                `El cargamento del ${camion.id} superó el límite permitido de ${LIMITE_TEMPERATURA_ALTA}°C.`;
+
+            popup.classList.add("show");
+
+            setTimeout(() => {
+                popup.classList.remove("show");
+            }, 12000);
+        }
+
+        function cerrarPopupAlerta() {
+            document.getElementById("popupAlertaConductor").classList.remove("show");
+        }
+
+        /* ============================================================
+           FUNCIÓN DE NOTIFICACIÓN SIN BOTÓN VISIBLE
+
+           No aparece ningún botón.
+           Solo se prepara el sonido y las notificaciones con el primer:
+           - clic
+           - toque de pantalla
+           - tecla presionada
+        ============================================================ */
+        function prepararFuncionesDeNotificacionSinBoton() {
+            const activarFunciones = async () => {
+                try {
+                    if (!audioContext) {
+                        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    }
+
+                    if (audioContext.state === "suspended") {
+                        await audioContext.resume();
+                    }
+
+                    sonidoHabilitado = true;
+
+                    const avisoSonido = document.getElementById("avisoSonido");
+
+                    if (avisoSonido) {
+                        avisoSonido.style.display = "none";
+                    }
+
+                    sonidoConfirmacion();
+
+                    if ("Notification" in window && Notification.permission === "default") {
+                        await Notification.requestPermission();
+                    }
+
+                    const camion05 = camiones.find(camion => camion.id === "CAM-05");
+
+                    if (camion05) {
+                        revisarAlertaCamion(camion05, {
+                            hora: obtenerHoraSimulada()
+                        });
+                    }
+
+                    document.removeEventListener("click", activarFunciones);
+                    document.removeEventListener("touchstart", activarFunciones);
+                    document.removeEventListener("keydown", activarFunciones);
+
+                } catch (error) {
+                    console.warn("No se pudo activar sonido/notificaciones:", error);
+                }
+            };
+
+            document.addEventListener("click", activarFunciones);
+            document.addEventListener("touchstart", activarFunciones);
+            document.addEventListener("keydown", activarFunciones);
+        }
+
+        /* ============================================================
+           SONIDOS
+        ============================================================ */
+        function sonidoConfirmacion() {
+            reproducirBeep(600, 120, 0);
+            reproducirBeep(800, 120, 160);
+        }
+
+        function sonidoAlarma() {
+            reproducirBeep(900, 250, 0);
+            reproducirBeep(700, 250, 300);
+            reproducirBeep(900, 250, 600);
+            reproducirBeep(700, 250, 900);
+        }
+
+        function reproducirBeep(frecuencia, duracion, retraso) {
+            if (!audioContext || !sonidoHabilitado) return;
+
+            setTimeout(() => {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.type = "square";
+                oscillator.frequency.setValueAtTime(frecuencia, audioContext.currentTime);
+
+                gainNode.gain.setValueAtTime(0.25, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(
+                    0.01,
+                    audioContext.currentTime + duracion / 1000
+                );
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + duracion / 1000);
+            }, retraso);
+        }
+
+        function notificacionNavegador(camionId, temperatura) {
+            if (!("Notification" in window)) return;
+
+            if (Notification.permission === "granted") {
+                new Notification("🚨 Alerta de temperatura", {
+                    body: `${camionId} tiene temperatura elevada: ${temperatura} °C`,
+                    icon: "images/camion.png"
+                });
+            }
+        }
+
+        function vibracionMovil() {
+            if ("vibrate" in navigator) {
+                navigator.vibrate([400, 200, 400, 200, 600]);
+            }
+        }
+
+        /* ============================================================
+           INICIALIZACIÓN GENERAL
+        ============================================================ */
+        inicializarMapa();
+        cargarCamionesEnMapa();
+        cargarTablaCamiones();
+        actualizarMetricas();
+        inicializarGraficaTemperatura();
+
+        // Prepara sonido y notificación, pero sin botón visible.
+        prepararFuncionesDeNotificacionSinBoton();
+
+        // Inicia la simulación del movimiento siguiendo calles.
+        iniciarSimulacionMovimientoCAM05();
     </script>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        const ctx = document.getElementById('graficaTemp');
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: ['11:32','11:34','11:36','11:38','11:40','11:42'],
-                datasets: [{
-                    label: 'Temperatura °C',
-                    data: [2, 4, 6, 5, 4, 5],
-                    borderColor: '#2196f3',
-                    backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                    borderWidth: 3,
-                    tension: 0.2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        labels: { color: '#94a3b8' }
-                    }
-                },
-                scales: {
-                    x: { ticks: { color: '#94a3b8' } },
-                    y: { ticks: { color: '#94a3b8' } }
-                }
-            }
-        });
-    </script>
+    <!-- ============================================================
+         AUTH GUARD
+         Déjalo solo si tu proyecto usa este archivo.
+         Si te da error porque no existe, comenta esta línea.
+    ============================================================ -->
     <script type="module" src="assets/js/auth-guard.js"></script>
 </body>
 </html>
