@@ -9,6 +9,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css">
 
     <style>
         /* ============================================================
@@ -65,13 +66,51 @@
         .cerrar-alerta:hover { background: rgba(255, 255, 255, 0.3); }
         .aviso-sonido { margin-top: 10px; background: rgba(255, 255, 255, 0.15); padding: 8px 10px; border-radius: 10px; font-size: 0.85rem; }
 
+        /* Oculta el panel de instrucciones de Leaflet Routing Machine;
+           solo queremos ver la línea de ruta y los marcadores. */
+        .leaflet-routing-container { display: none !important; }
+
+        /* ============================================================
+           BARRA DE ESTADO: FUENTE DE UBICACIÓN + RIESGO IA
+        ============================================================ */
+        .barra-estado-ia { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; }
+        .badge-estado { background: #1e293b; color: #cbd5e1; font-size: 0.85rem; padding: 6px 12px; border-radius: 20px; border: 1px solid #334155; }
+        .badge-estado.fuente-gps { border-color: #22c55e; color: #bbf7d0; }
+        .badge-estado.fuente-simulada { border-color: #f59e0b; color: #fde68a; }
+        .badge-estado.riesgo-alerta, .badge-estado.riesgo-critico { border-color: #ef4444; color: #fecaca; animation: pulsoAlerta 1.4s infinite; }
+        .btn-probar-ia { margin-left: auto; background: #2563eb; color: white; border: none; padding: 7px 14px; border-radius: 10px; font-size: 0.85rem; cursor: pointer; }
+        .btn-probar-ia:hover { background: #1d4ed8; }
+
+        /* ============================================================
+           MODAL: PREDICCIÓN DE IA + HOSPITAL + RUTA
+        ============================================================ */
+        .modal-ia-overlay { display: none; position: fixed; inset: 0; background: rgba(4, 8, 20, 0.72); z-index: 100000; align-items: center; justify-content: center; padding: 20px; }
+        .modal-ia-overlay.show { display: flex; }
+        .modal-ia-card { background: #11203d; border: 1px solid #263a63; border-radius: 18px; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; padding: 22px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5); animation: entradaAlerta 0.25s ease; }
+        .modal-ia-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+        .modal-ia-header h3 { font-size: 1.15rem; color: #93c5fd; }
+        .cerrar-modal-ia { background: rgba(255, 255, 255, 0.1); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; font-size: 18px; cursor: pointer; }
+        .cerrar-modal-ia:hover { background: rgba(255, 255, 255, 0.2); }
+        .modal-ia-badge-fuente { display: inline-block; background: #1e293b; border: 1px solid #334155; color: #cbd5e1; font-size: 0.85rem; padding: 6px 12px; border-radius: 20px; margin-bottom: 14px; }
+        .modal-ia-console { background: #060c1a; border: 1px solid #1e293b; border-radius: 10px; padding: 14px; font-family: "Consolas", "Courier New", monospace; font-size: 0.85rem; color: #86efac; line-height: 1.6; margin-bottom: 16px; }
+        .modal-ia-console .consola-etiqueta { color: #64748b; }
+        .modal-ia-console .riesgo-alerta, .modal-ia-console .riesgo-critico { color: #f87171; }
+        .modal-ia-console .riesgo-atencion { color: #fbbf24; }
+        .modal-ia-console .riesgo-normal { color: #4ade80; }
+        .modal-ia-hospital h4 { font-size: 0.95rem; color: #94a3b8; margin-bottom: 8px; }
+        .modal-ia-hospital { margin-bottom: 14px; }
+        .modal-ia-mapa { width: 100%; height: 260px; border-radius: 12px; overflow: hidden; }
+        .mini-marker { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; border: 2px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.5); }
+        .mini-marker-camion { background: #2196f3; }
+        .mini-marker-hospital { background: #ef4444; }
+
         @keyframes entradaAlerta {
             from { transform: translateX(120%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
 
         @media (max-width: 1000px) { body { flex-direction: column; } .sidebar { width: 100%; min-height: auto; } .main { width: 100%; } .cards { grid-template-columns: repeat(2, 1fr); } .dashboard { grid-template-columns: 1fr; } }
-        @media (max-width: 600px) { header { flex-direction: column; align-items: flex-start; } .cards { grid-template-columns: 1fr; } .alerta-conductor-popup { width: calc(100% - 30px); right: 15px; top: 15px; } table { font-size: 0.85rem; } }
+        @media (max-width: 600px) { header { flex-direction: column; align-items: flex-start; } .cards { grid-template-columns: 1fr; } .alerta-conductor-popup { width: calc(100% - 30px); right: 15px; top: 15px; } .modal-ia-card { padding: 16px; } .btn-probar-ia { margin-left: 0; } table { font-size: 0.85rem; } }
     </style>
 </head>
 
@@ -130,6 +169,15 @@
         <div class="dashboard">
             <div class="mapa">
                 <h2>Mapa en Tiempo Real</h2>
+
+                <div class="barra-estado-ia">
+                    <span class="badge-estado" id="badgeUbicacionFuente">📍 Ubicación: esperando datos...</span>
+                    <span class="badge-estado" id="badgeRiesgoIA">🧠 IA: sin análisis aún</span>
+                    <button type="button" class="btn-probar-ia" onclick="probarModalPrediccionIA()">
+                        Probar predicción IA
+                    </button>
+                </div>
+
                 <div id="map"></div>
             </div>
             <div class="grafica">
@@ -172,7 +220,42 @@
         </div>
     </div>
 
+    <!-- ============================================================
+         MODAL: PREDICCIÓN DE IA + HOSPITAL MÁS CERCANO + RUTA
+         Se abre solo cuando llega un análisis de Gemini con riesgo
+         "alerta"/"critico" (nodo analisisIA en Firebase), o como
+         respaldo cuando la temperatura simple supera el límite y
+         Gemini todavía no ha mandado nada.
+         Ubicación: usa el GPS real si ya está funcionando; si no,
+         cae automáticamente a la ubicación de este navegador y
+         regresa sola al GPS real en cuanto vuelva a tener señal.
+    ============================================================ -->
+    <div id="modalPrediccionIA" class="modal-ia-overlay">
+        <div class="modal-ia-card">
+            <div class="modal-ia-header">
+                <h3><i class="fas fa-brain"></i> Predicción de IA - Cadena de Frío</h3>
+                <button class="cerrar-modal-ia" onclick="cerrarModalPrediccionIA()">×</button>
+            </div>
+
+            <div class="modal-ia-badge-fuente" id="modalIAFuenteUbicacion">
+                📍 Obteniendo ubicación...
+            </div>
+
+            <div class="modal-ia-console" id="modalIAConsola">
+                <div>Esperando análisis de la IA...</div>
+            </div>
+
+            <div class="modal-ia-hospital">
+                <h4><i class="fas fa-hospital"></i> Hospital más cercano</h4>
+                <div id="modalIAHospitalInfo">Aún no se ha buscado ningún hospital.</div>
+            </div>
+
+            <div id="modalIAMapaHospital" class="modal-ia-mapa"></div>
+        </div>
+    </div>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script type="module">
@@ -198,6 +281,12 @@
         let sonidoHabilitado = false;
         const alertasVisualesMostradas = new Set();
         const alertasSonorasReproducidas = new Set();
+        const analisisIAMostrados = new Set();
+
+        // true cuando el ESP32 ya está mandando latitud/longitud reales;
+        // false mientras diga "Buscando..." (entonces usamos el navegador).
+        let gpsReal = false;
+        let ubicacionNavegadorCache = null;
         
         // Estructura de nuestro camión real
         let miCamion = {
@@ -267,7 +356,9 @@
             miCamion.alertaActiva = miCamion.temperaturaActualC >= LIMITE_TEMPERATURA_ALTA;
             
             // GPS
-            if (datosNube.latitud !== "Buscando..." && datosNube.longitud !== "Buscando...") {
+            gpsReal = datosNube.latitud !== "Buscando..." && datosNube.longitud !== "Buscando...";
+
+            if (gpsReal) {
                 miCamion.ubicacionActual.lat = parseFloat(datosNube.latitud);
                 miCamion.ubicacionActual.lng = parseFloat(datosNube.longitud);
                 miCamion.estado = miCamion.alertaActiva ? "Alerta de Temperatura" : "En Ruta Activa";
@@ -287,6 +378,9 @@
             } else {
                 miCamion.estado = "Esperando señal satelital...";
             }
+
+            actualizarBadgeFuente(gpsReal ? "gps" : "simulada");
+            evaluarYAbrirModalIA(datosNube);
 
             actualizarMarcadorCamion();
             actualizarTabla();
@@ -421,6 +515,276 @@
                 oscillator.stop(audioContext.currentTime + duracion / 1000);
             }, retraso);
         }
+
+        // ============================================================
+        // MODAL DE PREDICCIÓN IA: UBICACIÓN + HOSPITAL + RUTA
+        // ============================================================
+        let modalIALeafletMap = null;
+        let modalIARoutingControl = null;
+
+        function textoFuenteUbicacion(fuente) {
+            return fuente === "gps"
+                ? "📍 Ubicación real (GPS del vehículo)"
+                : "💻 Ubicación simulada (GPS de este navegador/laptop)";
+        }
+
+        function actualizarBadgeFuente(fuente) {
+            const badge = document.getElementById("badgeUbicacionFuente");
+            if (!badge) return;
+            badge.textContent = textoFuenteUbicacion(fuente);
+            badge.classList.remove("fuente-gps", "fuente-simulada");
+            badge.classList.add(fuente === "gps" ? "fuente-gps" : "fuente-simulada");
+        }
+
+        function actualizarBadgeRiesgo(analisis) {
+            const badge = document.getElementById("badgeRiesgoIA");
+            if (!badge) return;
+
+            if (!analisis) {
+                badge.textContent = "🧠 IA: sin análisis aún";
+                badge.classList.remove("riesgo-normal", "riesgo-atencion", "riesgo-alerta", "riesgo-critico");
+                return;
+            }
+
+            badge.textContent = `🧠 IA: ${analisis.nivelRiesgo.toUpperCase()} (${analisis.probabilidadFallaPct}%)`;
+            badge.classList.remove("riesgo-normal", "riesgo-atencion", "riesgo-alerta", "riesgo-critico");
+            badge.classList.add(`riesgo-${analisis.nivelRiesgo}`);
+        }
+
+        // Si el GPS real ya está funcionando (gpsReal === true) usa esas
+        // coordenadas; si no, pide la ubicación de este navegador (laptop)
+        // como respaldo temporal.
+        function obtenerUbicacionDelVehiculo() {
+            return new Promise((resolve) => {
+                if (gpsReal) {
+                    resolve({ lat: miCamion.ubicacionActual.lat, lng: miCamion.ubicacionActual.lng, fuente: "gps" });
+                    return;
+                }
+
+                if (!("geolocation" in navigator)) {
+                    resolve(ubicacionNavegadorCache);
+                    return;
+                }
+
+                navigator.geolocation.getCurrentPosition(
+                    (posicion) => {
+                        ubicacionNavegadorCache = {
+                            lat: posicion.coords.latitude,
+                            lng: posicion.coords.longitude,
+                            fuente: "simulada"
+                        };
+                        resolve(ubicacionNavegadorCache);
+                    },
+                    (error) => {
+                        console.warn("No se pudo obtener ubicación del navegador:", error.message);
+                        resolve(ubicacionNavegadorCache);
+                    },
+                    { enableHighAccuracy: true, timeout: 8000 }
+                );
+            });
+        }
+
+        function distanciaHaversineKm(lat1, lng1, lat2, lng2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLng = (lng2 - lng1) * Math.PI / 180;
+            const a =
+                Math.sin(dLat / 2) ** 2 +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        }
+
+        // Busca el hospital más cercano con la API pública de Overpass (OpenStreetMap).
+        async function buscarHospitalCercano(lat, lng) {
+            const consulta = `[out:json][timeout:25];(node["amenity"="hospital"](around:8000,${lat},${lng});way["amenity"="hospital"](around:8000,${lat},${lng}););out center 15;`;
+
+            try {
+                const respuesta = await fetch("https://overpass-api.de/api/interpreter", {
+                    method: "POST",
+                    body: consulta
+                });
+
+                if (!respuesta.ok) {
+                    throw new Error(`Overpass respondió con código ${respuesta.status}`);
+                }
+
+                const datos = await respuesta.json();
+                if (!datos.elements || !datos.elements.length) return null;
+
+                let mejor = null;
+                let mejorDistancia = Infinity;
+
+                datos.elements.forEach((elemento) => {
+                    const elLat = elemento.lat ?? elemento.center?.lat;
+                    const elLng = elemento.lon ?? elemento.center?.lon;
+                    if (elLat == null || elLng == null) return;
+
+                    const distancia = distanciaHaversineKm(lat, lng, elLat, elLng);
+                    if (distancia < mejorDistancia) {
+                        mejorDistancia = distancia;
+                        mejor = {
+                            nombre: elemento.tags?.name || "Hospital sin nombre registrado",
+                            lat: elLat,
+                            lng: elLng,
+                            distanciaKm: distancia
+                        };
+                    }
+                });
+
+                return mejor;
+            } catch (error) {
+                console.error("Error buscando hospital cercano:", error);
+                return null;
+            }
+        }
+
+        function dibujarRutaModalIA(origen, hospital) {
+            if (!modalIALeafletMap) {
+                modalIALeafletMap = L.map("modalIAMapaHospital");
+                L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                    attribution: "&copy; OpenStreetMap contributors"
+                }).addTo(modalIALeafletMap);
+            }
+
+            setTimeout(() => modalIALeafletMap.invalidateSize(), 200);
+
+            if (modalIARoutingControl) {
+                modalIALeafletMap.removeControl(modalIARoutingControl);
+                modalIARoutingControl = null;
+            }
+
+            modalIARoutingControl = L.Routing.control({
+                waypoints: [
+                    L.latLng(origen.lat, origen.lng),
+                    L.latLng(hospital.lat, hospital.lng)
+                ],
+                routeWhileDragging: false,
+                addWaypoints: false,
+                draggableWaypoints: false,
+                fitSelectedRoutes: true,
+                show: false,
+                createMarker: function (indice, waypoint) {
+                    const esOrigen = indice === 0;
+                    return L.marker(waypoint.latLng, {
+                        icon: L.divIcon({
+                            html: esOrigen
+                                ? '<div class="mini-marker mini-marker-camion"><i class="fas fa-truck"></i></div>'
+                                : '<div class="mini-marker mini-marker-hospital"><i class="fas fa-hospital"></i></div>',
+                            className: "",
+                            iconSize: [32, 32],
+                            iconAnchor: [16, 16]
+                        })
+                    });
+                },
+                lineOptions: {
+                    styles: [{ color: "#3b82f6", weight: 5, opacity: 0.9 }]
+                }
+            }).addTo(modalIALeafletMap);
+
+            modalIARoutingControl.on("routingerror", () => {
+                console.warn("No se pudo calcular la ruta real al hospital; se deja solo el marcador.");
+            });
+        }
+
+        async function abrirModalPrediccionIA(analisis, camionId) {
+            const overlay = document.getElementById("modalPrediccionIA");
+            overlay.classList.add("show");
+
+            document.getElementById("modalIAConsola").innerHTML = `
+                <div><span class="consola-etiqueta">Camión:</span> ${camionId}</div>
+                <div><span class="consola-etiqueta">Nivel de riesgo:</span> <b class="riesgo-${analisis.nivelRiesgo}">${analisis.nivelRiesgo.toUpperCase()}</b></div>
+                <div><span class="consola-etiqueta">Probabilidad de falla:</span> ${analisis.probabilidadFallaPct}%</div>
+                <div><span class="consola-etiqueta">Temperatura analizada:</span> ${analisis.temperaturaAnalizadaC ?? "--"} °C</div>
+                <div><span class="consola-etiqueta">Predicción:</span> ${analisis.prediccion}</div>
+                <div><span class="consola-etiqueta">Mensaje:</span> ${analisis.mensaje}</div>
+                <div><span class="consola-etiqueta">Acción recomendada:</span> ${analisis.accionRecomendada}</div>
+            `;
+
+            const badgeModal = document.getElementById("modalIAFuenteUbicacion");
+            badgeModal.textContent = "📍 Obteniendo ubicación...";
+            document.getElementById("modalIAHospitalInfo").textContent = "Buscando hospital más cercano...";
+
+            const ubicacion = await obtenerUbicacionDelVehiculo();
+
+            if (!ubicacion) {
+                badgeModal.textContent = "⚠️ No se pudo obtener ubicación (ni GPS ni navegador)";
+                document.getElementById("modalIAHospitalInfo").textContent =
+                    "No se puede buscar hospital sin una ubicación disponible.";
+                return;
+            }
+
+            badgeModal.textContent = textoFuenteUbicacion(ubicacion.fuente);
+
+            const hospital = await buscarHospitalCercano(ubicacion.lat, ubicacion.lng);
+
+            if (!hospital) {
+                document.getElementById("modalIAHospitalInfo").textContent =
+                    "No se encontró ningún hospital en un radio de 8 km.";
+                return;
+            }
+
+            document.getElementById("modalIAHospitalInfo").innerHTML = `
+                <strong>${hospital.nombre}</strong><br>
+                Distancia aproximada: ${hospital.distanciaKm.toFixed(2)} km
+            `;
+
+            dibujarRutaModalIA(ubicacion, hospital);
+        }
+
+        function cerrarModalPrediccionIA() {
+            document.getElementById("modalPrediccionIA").classList.remove("show");
+        }
+        window.cerrarModalPrediccionIA = cerrarModalPrediccionIA;
+
+        // Decide si toca abrir el modal: primero revisa si ya llegó un
+        // análisis real de Gemini (nodo analisisIA); si todavía no hay
+        // ninguno, usa el umbral simple de temperatura como respaldo para
+        // no dejar al conductor sin ayuda mientras configuras la IA.
+        function evaluarYAbrirModalIA(datosNube) {
+            const analisis = datosNube.analisisIA;
+            actualizarBadgeRiesgo(analisis || null);
+
+            if (analisis && (analisis.nivelRiesgo === "alerta" || analisis.nivelRiesgo === "critico")) {
+                const clave = `ia-${miCamion.id}-${analisis.generadoEn}`;
+                if (!analisisIAMostrados.has(clave)) {
+                    analisisIAMostrados.add(clave);
+                    abrirModalPrediccionIA(analisis, miCamion.id);
+                }
+                return;
+            }
+
+            if (!analisis && miCamion.alertaActiva) {
+                const clave = `simple-${miCamion.id}-${datosNube.timestamp}`;
+                if (!analisisIAMostrados.has(clave)) {
+                    analisisIAMostrados.add(clave);
+                    abrirModalPrediccionIA({
+                        nivelRiesgo: "alerta",
+                        probabilidadFallaPct: 100,
+                        prediccion: "La temperatura superó el límite seguro configurado.",
+                        mensaje: `La temperatura actual (${miCamion.temperaturaActualC} °C) está fuera de rango.`,
+                        accionRecomendada: "Detente en un lugar seguro y revisa el sistema de refrigeración.",
+                        temperaturaAnalizadaC: miCamion.temperaturaActualC
+                    }, miCamion.id);
+                }
+            }
+        }
+
+        // Botón "Probar predicción IA": para seguir avanzando en la interfaz
+        // sin depender de que el GPS o Gemini ya estén funcionando.
+        function probarModalPrediccionIA() {
+            abrirModalPrediccionIA(
+                {
+                    nivelRiesgo: "alerta",
+                    probabilidadFallaPct: 82,
+                    prediccion: "La temperatura seguirá bajando fuera de rango en los próximos minutos si no se corrige.",
+                    mensaje: "Se detectó una caída sostenida de temperatura por debajo del límite seguro.",
+                    accionRecomendada: "Detente en un lugar seguro y revisa el sistema de refrigeración.",
+                    temperaturaAnalizadaC: 1.8
+                },
+                miCamion.id + " (prueba)"
+            );
+        }
+        window.probarModalPrediccionIA = probarModalPrediccionIA;
 
         // ARRANQUE DE TODO EL SISTEMA
         inicializarMapa();
