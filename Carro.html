@@ -174,7 +174,7 @@
                     <span class="badge-estado" id="badgeUbicacionFuente">📍 Ubicación: esperando datos...</span>
                     <span class="badge-estado" id="badgeRiesgoIA">🧠 IA: sin análisis aún</span>
                     <button type="button" class="btn-probar-ia" onclick="probarModalPrediccionIA()">
-                        Probar predicción IA
+                        Predicción IA
                     </button>
                 </div>
 
@@ -524,8 +524,8 @@
 
         function textoFuenteUbicacion(fuente) {
             return fuente === "gps"
-                ? "📍 Ubicación real (GPS del vehículo)"
-                : "💻 Ubicación simulada (GPS de este navegador/laptop)";
+                ? "📍 Ubicación"
+                : "📍 Ubicación";
         }
 
         function actualizarBadgeFuente(fuente) {
@@ -594,48 +594,67 @@
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         }
 
-        // Busca el hospital más cercano con la API pública de Overpass (OpenStreetMap).
-        async function buscarHospitalCercano(lat, lng) {
-            const consulta = `[out:json][timeout:25];(node["amenity"="hospital"](around:8000,${lat},${lng});way["amenity"="hospital"](around:8000,${lat},${lng}););out center 15;`;
+        // Radios de búsqueda en metros: intenta el más chico primero y solo
+        // si no encuentra nada, prueba con el siguiente (útil en zonas
+        // rurales o alejadas de hospitales).
+        const RADIOS_BUSQUEDA_HOSPITAL_M = [8000, 15000, 30000, 50000];
 
-            try {
-                const respuesta = await fetch("https://overpass-api.de/api/interpreter", {
-                    method: "POST",
-                    body: consulta
-                });
+        // Busca hospitales dentro de un radio específico (en metros) usando Overpass.
+        async function buscarHospitalesEnRadio(lat, lng, radioMetros) {
+            const consulta = `[out:json][timeout:25];(node["amenity"="hospital"](around:${radioMetros},${lat},${lng});way["amenity"="hospital"](around:${radioMetros},${lat},${lng}););out center 15;`;
 
-                if (!respuesta.ok) {
-                    throw new Error(`Overpass respondió con código ${respuesta.status}`);
-                }
+            const respuesta = await fetch("https://overpass-api.de/api/interpreter", {
+                method: "POST",
+                body: consulta
+            });
 
-                const datos = await respuesta.json();
-                if (!datos.elements || !datos.elements.length) return null;
-
-                let mejor = null;
-                let mejorDistancia = Infinity;
-
-                datos.elements.forEach((elemento) => {
-                    const elLat = elemento.lat ?? elemento.center?.lat;
-                    const elLng = elemento.lon ?? elemento.center?.lon;
-                    if (elLat == null || elLng == null) return;
-
-                    const distancia = distanciaHaversineKm(lat, lng, elLat, elLng);
-                    if (distancia < mejorDistancia) {
-                        mejorDistancia = distancia;
-                        mejor = {
-                            nombre: elemento.tags?.name || "Hospital sin nombre registrado",
-                            lat: elLat,
-                            lng: elLng,
-                            distanciaKm: distancia
-                        };
-                    }
-                });
-
-                return mejor;
-            } catch (error) {
-                console.error("Error buscando hospital cercano:", error);
-                return null;
+            if (!respuesta.ok) {
+                throw new Error(`Overpass respondió con código ${respuesta.status}`);
             }
+
+            const datos = await respuesta.json();
+            if (!datos.elements || !datos.elements.length) return null;
+
+            let mejor = null;
+            let mejorDistancia = Infinity;
+
+            datos.elements.forEach((elemento) => {
+                const elLat = elemento.lat ?? elemento.center?.lat;
+                const elLng = elemento.lon ?? elemento.center?.lon;
+                if (elLat == null || elLng == null) return;
+
+                const distancia = distanciaHaversineKm(lat, lng, elLat, elLng);
+                if (distancia < mejorDistancia) {
+                    mejorDistancia = distancia;
+                    mejor = {
+                        nombre: elemento.tags?.name || "Hospital sin nombre registrado",
+                        lat: elLat,
+                        lng: elLng,
+                        distanciaKm: distancia
+                    };
+                }
+            });
+
+            return mejor;
+        }
+
+        // Busca el hospital más cercano probando radios cada vez más grandes
+        // hasta encontrar algo (o hasta acabarse los radios disponibles).
+        async function buscarHospitalCercano(lat, lng) {
+            for (const radioMetros of RADIOS_BUSQUEDA_HOSPITAL_M) {
+                try {
+                    const encontrado = await buscarHospitalesEnRadio(lat, lng, radioMetros);
+                    if (encontrado) {
+                        encontrado.radioBusquedaKm = radioMetros / 1000;
+                        return encontrado;
+                    }
+                } catch (error) {
+                    console.error(`Error buscando hospital en radio de ${radioMetros / 1000} km:`, error);
+                    // seguimos intentando con el siguiente radio en vez de rendirnos
+                }
+            }
+
+            return null;
         }
 
         function dibujarRutaModalIA(origen, hospital) {
@@ -718,14 +737,16 @@
             const hospital = await buscarHospitalCercano(ubicacion.lat, ubicacion.lng);
 
             if (!hospital) {
+                const maxRadioKm = RADIOS_BUSQUEDA_HOSPITAL_M[RADIOS_BUSQUEDA_HOSPITAL_M.length - 1] / 1000;
                 document.getElementById("modalIAHospitalInfo").textContent =
-                    "No se encontró ningún hospital en un radio de 8 km.";
+                    `No se encontró ningún hospital en un radio de hasta ${maxRadioKm} km.`;
                 return;
             }
 
             document.getElementById("modalIAHospitalInfo").innerHTML = `
                 <strong>${hospital.nombre}</strong><br>
                 Distancia aproximada: ${hospital.distanciaKm.toFixed(2)} km
+                (encontrado buscando en un radio de ${hospital.radioBusquedaKm} km)
             `;
 
             dibujarRutaModalIA(ubicacion, hospital);
