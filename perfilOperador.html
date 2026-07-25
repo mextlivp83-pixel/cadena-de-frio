@@ -16,6 +16,63 @@
     <script type="module" src="assets/js/auth-guard.js"></script>
 </head>
 
+<!-- ============================================================
+         SCRIPT DE CONEXIÓN FIREBASE PARA VISTA OPERADOR
+    ============================================================ -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        // 1. Configuración de conexión a tu base de datos
+        const firebaseConfig = {
+            databaseURL: "https://cadenafrio-default-rtdb.firebaseio.com"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // Límite de temperatura para la alerta
+        const LIMITE_TEMPERATURA = 35; 
+
+        // 2. Conectamos con los IDs que ya tienes en tu HTML
+        const uiTemp = document.getElementById("txt-telemetria-temperatura");
+        const uiHum = document.getElementById("txt-telemetria-humedad");
+        const uiSemaforo = document.getElementById("badge-ruta-color");
+
+        // 3. Escuchamos los datos en tiempo real de tu ESP32
+        const monitoreoRef = ref(db, 'monitoreo/camion_01');
+
+        onValue(monitoreoRef, (snapshot) => {
+            const datosNube = snapshot.val();
+            
+            if (datosNube) {
+                // Sacamos los valores numéricos
+                const tempActual = (datosNube.temperatura !== "Error") ? parseFloat(datosNube.temperatura) : 0;
+                const humActual = (datosNube.humedad !== "Error") ? parseFloat(datosNube.humedad) : 0;
+
+                // Actualizamos los textos de Temperatura y Humedad
+                if(uiTemp) uiTemp.textContent = `${tempActual} °C`;
+                if(uiHum) uiHum.textContent = `${humActual} %`;
+
+                // Lógica del Semáforo de Seguridad
+                if(uiSemaforo) {
+                    if (tempActual >= LIMITE_TEMPERATURA) {
+                        uiSemaforo.textContent = "Alerta de Temp.";
+                        // Le aplicamos estilos en línea para sobreescribir la clase "alert-badge-normal"
+                        uiSemaforo.style.backgroundColor = "#fecaca"; 
+                        uiSemaforo.style.color = "#dc2626";           
+                        uiSemaforo.style.border = "1px solid #f87171";
+                    } else {
+                        uiSemaforo.textContent = "Normal";
+                        // Regresamos a los colores verdes de normalidad
+                        uiSemaforo.style.backgroundColor = "#d1fae5"; 
+                        uiSemaforo.style.color = "#059669";           
+                        uiSemaforo.style.border = "none";
+                    }
+                }
+            }
+        });
+    </script>
+
 <body>
     <div class="status-card">
         <div class="status-header">
@@ -62,10 +119,6 @@
                 <div class="telemetry-widget">
                     <div class="telemetry-label">Humedad</div>
                     <div class="telemetry-value color-hum" id="txt-telemetria-humedad">15 %</div>
-                </div>
-                <div class="telemetry-widget">
-                    <div class="telemetry-label">Velocidad</div>
-                    <div class="telemetry-value color-vel" id="txt-telemetria-velocidad">15 km/h</div>
                 </div>
             </div>
 
