@@ -145,9 +145,6 @@
                 <a href="mapa.html" class="nav-link-custom active">
                     <i class="bi bi-geo-alt fs-5"></i> Monitoreo de Ruta
                 </a>
-                <a href="ia.html" class="nav-link-custom">
-                    <i class="bi bi-cpu fs-5"></i> Alerta de anomalías
-                </a>
             </nav>
             <div class="restringido-operator w-100">
                     <a href="/catalogo.html" class="nav-link-custom">
@@ -305,7 +302,7 @@
         const db = getDatabase(app);
 
         // CONFIGURACIÓN
-        const LIMITE_TEMPERATURA_ALTA = 35; // Ajusta esto según lo que requieras
+        const LIMITE_TEMPERATURA_ALTA = 28; // Ajusta esto según lo que requieras
         let map;
         let graficaTemperatura;
         const markersCamiones = {};
