@@ -636,26 +636,21 @@
         // rurales o alejadas de hospitales).
         const RADIOS_BUSQUEDA_HOSPITAL_M = [8000, 15000, 30000, 50000];
 
-        // Varios servidores públicos de Overpass. overpass-api.de a veces
-        // deja de mandar el header CORS cuando está saturado; si eso pasa,
-        // probamos con los otros espejos automáticamente.
-        const SERVIDORES_OVERPASS = [
-            "https://overpass-api.de/api/interpreter",
-            "https://overpass.kumi.systems/api/interpreter",
-            "https://overpass.private.coffee/api/interpreter"
-        ];
+        // Guarda el último error de red al buscar hospital, para poder
+        // mostrarlo en el modal en vez de solo dejarlo en la consola.
+        let ultimoErrorBusquedaHospital = null;
 
-        // Busca hospitales dentro de un radio específico (en metros) usando un servidor Overpass dado.
-        async function buscarHospitalesEnRadio(servidorOverpass, lat, lng, radioMetros) {
-            const consulta = `[out:json][timeout:25];(node["amenity"="hospital"](around:${radioMetros},${lat},${lng});way["amenity"="hospital"](around:${radioMetros},${lat},${lng}););out center 15;`;
-
-            const respuesta = await fetch(servidorOverpass, {
-                method: "POST",
-                body: consulta
-            });
+        // Busca hospitales dentro de un radio específico llamando a nuestra
+        // propia función serverless (/api/hospital). Esa función es la que
+        // habla con Overpass del lado del servidor, así evitamos los
+        // bloqueos de CORS que pasan al llamar a Overpass directo desde
+        // el navegador (como cuando el sitio corre en Vercel).
+        async function buscarHospitalesEnRadio(lat, lng, radioMetros) {
+            const respuesta = await fetch(`/api/hospital?lat=${lat}&lng=${lng}&radio=${radioMetros}`);
 
             if (!respuesta.ok) {
-                throw new Error(`Overpass respondió con código ${respuesta.status}`);
+                const detalle = await respuesta.json().catch(() => ({}));
+                throw new Error(detalle.error || `Nuestra API respondió con código ${respuesta.status}`);
             }
 
             const datos = await respuesta.json();
@@ -684,39 +679,21 @@
             return mejor;
         }
 
-        // Guarda el último error de red al buscar hospital, para poder
-        // mostrarlo en el modal en vez de solo dejarlo en la consola.
-        let ultimoErrorBusquedaHospital = null;
-
-        // Prueba cada servidor Overpass; si uno falla por completo (CORS,
-        // red caída, timeout), pasa al siguiente. Dentro de un mismo
-        // servidor que sí responde, prueba radios cada vez más grandes.
+        // Prueba radios cada vez más grandes hasta encontrar un hospital.
         async function buscarHospitalCercano(lat, lng) {
             ultimoErrorBusquedaHospital = null;
 
-            for (const servidor of SERVIDORES_OVERPASS) {
-                let servidorFalló = false;
-
-                for (const radioMetros of RADIOS_BUSQUEDA_HOSPITAL_M) {
-                    try {
-                        const encontrado = await buscarHospitalesEnRadio(servidor, lat, lng, radioMetros);
-                        if (encontrado) {
-                            encontrado.radioBusquedaKm = radioMetros / 1000;
-                            return encontrado;
-                        }
-                    } catch (error) {
-                        console.error(`Error con ${servidor} en radio de ${radioMetros / 1000} km:`, error);
-                        ultimoErrorBusquedaHospital = error.message;
-                        servidorFalló = true;
-                        break; // este servidor no sirve, no perdemos tiempo probando más radios aquí
+            for (const radioMetros of RADIOS_BUSQUEDA_HOSPITAL_M) {
+                try {
+                    const encontrado = await buscarHospitalesEnRadio(lat, lng, radioMetros);
+                    if (encontrado) {
+                        encontrado.radioBusquedaKm = radioMetros / 1000;
+                        return encontrado;
                     }
-                }
-
-                // Si el servidor respondió bien pero de verdad no encontró
-                // nada en ningún radio, confiamos en ese resultado y no
-                // seguimos probando otros espejos (misma base de datos OSM).
-                if (!servidorFalló) {
-                    return null;
+                } catch (error) {
+                    console.error(`Error buscando hospital en radio de ${radioMetros / 1000} km:`, error);
+                    ultimoErrorBusquedaHospital = error.message;
+                    return null; // si nuestra propia API falla, no insistimos con más radios
                 }
             }
 
