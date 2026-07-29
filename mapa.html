@@ -389,21 +389,6 @@
             animation: pulsoAlerta 1.4s infinite;
         }
 
-        .btn-probar-ia {
-            margin-left: auto;
-            background: #2563eb;
-            color: white;
-            border: none;
-            padding: 7px 14px;
-            border-radius: 10px;
-            font-size: 0.85rem;
-            cursor: pointer;
-        }
-
-        .btn-probar-ia:hover {
-            background: #1d4ed8;
-        }
-
         /* ============================================================
            MODAL: PREDICCIÓN DE IA + HOSPITAL + RUTA
         ============================================================ */
@@ -433,6 +418,38 @@
             padding: 22px;
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
             animation: entradaAlerta 0.25s ease;
+        }
+
+        /* Se agrega cuando el modal abre por una alerta real de la IA
+           (riesgo "alerta" o "critico"): borde rojo brillante y un
+           resplandor que pulsa, para que se note de inmediato. */
+        .modal-ia-card.modal-ia-alerta {
+            border-color: #ef4444;
+            box-shadow: 0 0 0 2px #ef4444, 0 0 45px 8px rgba(239, 68, 68, 0.55);
+            animation: entradaAlerta 0.25s ease, brilloModalAlerta 1.4s ease-in-out infinite;
+        }
+
+        @keyframes brilloModalAlerta {
+            0%, 100% {
+                box-shadow: 0 0 0 2px #ef4444, 0 0 25px 4px rgba(239, 68, 68, 0.45);
+            }
+            50% {
+                box-shadow: 0 0 0 3px #fca5a5, 0 0 55px 12px rgba(239, 68, 68, 0.85);
+            }
+        }
+
+        .modal-ia-header.modal-ia-header-alerta h3 {
+            color: #fecaca;
+        }
+
+        .modal-ia-recordatorio-ruta {
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            border-radius: 10px;
+            padding: 10px 12px;
+            margin-bottom: 14px;
+            font-size: 0.88rem;
+            color: #fecaca;
         }
 
         .modal-ia-header {
@@ -586,10 +603,6 @@
                 padding: 16px;
             }
 
-            .btn-probar-ia {
-                margin-left: 0;
-            }
-
             table {
                 font-size: 0.85rem;
             }
@@ -686,9 +699,6 @@
                 <div class="barra-estado-ia">
                     <span class="badge-estado" id="badgeUbicacionFuente">📍 Ubicación: esperando datos...</span>
                     <span class="badge-estado" id="badgeRiesgoIA">🧠 IA: sin análisis aún</span>
-                    <button type="button" class="btn-probar-ia" onclick="probarModalPrediccionIA()">
-                        Probar predicción IA
-                    </button>
                 </div>
 
                 <div id="map"></div>
@@ -713,6 +723,7 @@
                     <tr>
                         <th>ID</th>
                         <th>Estado</th>
+                        <th>Ruta</th>
                         <th>Velocidad</th>
                         <th>Temperatura</th>
                     </tr>
@@ -740,6 +751,7 @@
         <div id="alertaTemperatura" class="temperatura-alerta">-- °C</div>
         <p id="alertaMensaje">La temperatura del cargamento está fuera del rango seguro.</p>
         <p><strong>Acción recomendada:</strong> revisar sistema de enfriamiento y reportar al centro de monitoreo.</p>
+        <p><i class="fas fa-route"></i> <strong>Recuerda tu ruta:</strong> real - Hospital General de México. Por esta emergencia te desvías al hospital más cercano; retoma tu ruta original en cuanto termine.</p>
 
         <div id="avisoSonido" class="aviso-sonido">
             <i class="fas fa-volume-high"></i>
@@ -762,10 +774,17 @@
          empiece a mandar coordenadas otra vez.
     ============================================================ -->
     <div id="modalPrediccionIA" class="modal-ia-overlay">
-        <div class="modal-ia-card">
-            <div class="modal-ia-header">
-                <h3><i class="fas fa-brain"></i> Predicción de IA - Cadena de Frío</h3>
+        <div class="modal-ia-card" id="modalIACard">
+            <div class="modal-ia-header" id="modalIAHeader">
+                <h3><i class="fas fa-triangle-exclamation"></i> Predicción de IA - Cadena de Frío</h3>
                 <button class="cerrar-modal-ia" onclick="cerrarModalPrediccionIA()">×</button>
+            </div>
+
+            <div class="modal-ia-recordatorio-ruta" id="modalIARecordatorioRuta">
+                <i class="fas fa-route"></i>
+                Tu ruta asignada es <strong>real - Hospital General de México</strong>.
+                Por esta emergencia te estás desviando a un hospital más cercano;
+                en cuanto termine la emergencia, retoma tu ruta original.
             </div>
 
             <div class="modal-ia-badge-fuente" id="modalIAFuenteUbicacion">
@@ -809,133 +828,36 @@
         const PASO_COORDENADAS = 8;
 
         /* ============================================================
-           DATOS SIMULADOS COMO SI VINIERAN DE FIREBASE
+           UN SOLO CAMIÓN, CON DATOS REALES
+           (solo tenemos 1 unidad física conectada por ESP32).
 
-           En Firebase, esto sería:
-           colección: camiones
-           documento: CAM-05
+           Este objeto arranca "vacío/esperando" y se va llenando
+           SOLO con lo que llega de Firebase (monitoreo/camion_01),
+           que es lo que sube puente.js desde el ESP32 real.
+           No hay datos inventados ni movimiento simulado.
         ============================================================ */
-        const camiones = [
-            {
-                id: "CAM-01",
-                nombreUnidad: "Unidad Refrigerada 01",
-                placa: "JAL-101",
-                estado: "En movimiento",
-                activo: true,
-                conductorId: "COND-01",
-                envioId: null,
-                ubicacionActual: {
-                    lat: 20.6736,
-                    lng: -103.3444
-                },
-                velocidadKmh: 65,
-                temperaturaActualC: 4.5,
-                humedadActualPct: 58,
-                puertaAbierta: false,
-                alertaActiva: false,
-                nivelAlerta: "normal",
-                kmRecorridosHoy: 65
-            },
-            {
-                id: "CAM-02",
-                nombreUnidad: "Unidad Refrigerada 02",
-                placa: "JAL-202",
-                estado: "En movimiento",
-                activo: true,
-                conductorId: "COND-02",
-                envioId: null,
-                ubicacionActual: {
-                    lat: 20.6420,
-                    lng: -103.4100
-                },
-                velocidadKmh: 55,
-                temperaturaActualC: 3.2,
-                humedadActualPct: 55,
-                puertaAbierta: false,
-                alertaActiva: false,
-                nivelAlerta: "normal",
-                kmRecorridosHoy: 57
-            },
-            {
-                id: "CAM-03",
-                nombreUnidad: "Unidad Refrigerada 03",
-                placa: "JAL-303",
-                estado: "En movimiento",
-                activo: true,
-                conductorId: "COND-03",
-                envioId: null,
-                ubicacionActual: {
-                    lat: 20.7000,
-                    lng: -103.3000
-                },
-                velocidadKmh: 40,
-                temperaturaActualC: 5.1,
-                humedadActualPct: 61,
-                puertaAbierta: false,
-                alertaActiva: false,
-                nivelAlerta: "normal",
-                kmRecorridosHoy: 43
-            },
-            {
-                id: "CAM-04",
-                nombreUnidad: "Unidad Refrigerada 04",
-                placa: "JAL-404",
-                estado: "Estacionado",
-                activo: true,
-                conductorId: "COND-04",
-                envioId: null,
-                ubicacionActual: {
-                    lat: 20.6100,
-                    lng: -103.3500
-                },
-                velocidadKmh: 0,
-                temperaturaActualC: 4.8,
-                humedadActualPct: 59,
-                puertaAbierta: false,
-                alertaActiva: false,
-                nivelAlerta: "normal",
-                kmRecorridosHoy: 28
-            },
-            {
-                id: "CAM-05",
-                nombreUnidad: "Unidad Refrigerada 05",
-                placa: "JAL-505",
-                estado: "En ruta",
-                activo: true,
-                conductorId: "COND-05",
-                envioId: "ENV-001",
-                ubicacionActual: {
-                    lat: 20.6420,
-                    lng: -103.4100
-                },
-                velocidadKmh: 25,
-                temperaturaActualC: 4.2,
-                humedadActualPct: 60,
-                puertaAbierta: false,
-                alertaActiva: false,
-                nivelAlerta: "normal",
-                kmRecorridosHoy: 10
-            }
-        ];
+        const ID_CAMION_REAL = "camion_01";
 
-        /* ============================================================
-           PUNTOS GUÍA DE LA RUTA CAM-05
+        const camionReal = {
+            id: ID_CAMION_REAL,
+            nombreUnidad: "Unidad Refrigerada (real)",
+            estado: "Esperando datos del ESP32...",
+            activo: false,
+            ubicacionActual: null, // se llena con GPS real o, si falta, con el del navegador
+            velocidadKmh: 0,
+            temperaturaActualC: null,
+            humedadActualPct: null,
+            puertaAbierta: false,
+            alertaActiva: false,
+            nivelAlerta: "normal",
+            fuenteUbicacion: null // "gps" | "simulada"
+        };
 
-           Estos puntos NO se dibujan en línea recta.
-           Leaflet Routing Machine + OSRM calcula el camino real
-           sobre calles entre estos puntos.
-
-           En Firebase esto podría venir de:
-           colección: rutas
-           documento: RUTA-001
-        ============================================================ */
-        const puntosGuiaCAM05 = [
-            [20.6420, -103.4100],
-            [20.6530, -103.3990],
-            [20.6650, -103.3800],
-            [20.6760, -103.3680],
-            [20.6870, -103.3540]
-        ];
+        // Las funciones de tabla/tarjetas/gráfica ya estaban hechas para
+        // recorrer un arreglo de camiones (forEach/filter/reduce). Como
+        // ahora solo hay un camión real, simplemente lo metemos en un
+        // arreglo de un elemento para no tener que reescribir esa parte.
+        const camiones = [camionReal];
 
         /* ============================================================
            VARIABLES GLOBALES
@@ -945,16 +867,11 @@
 
         const markersCamiones = {};
 
-        let controlRutaCAM05 = null;
-        let coordenadasRutaRealCAM05 = [];
-        let indiceRutaRealCAM05 = 0;
-        let intervaloMovimientoCAM05 = null;
-
-        // Estela real del trayecto ya recorrido por CAM-05.
-        // Esta línea inicia vacía y se va dibujando punto por punto
-        // conforme el camión avanza.
-        let estelaRutaCAM05 = null;
-        let coordenadasEstelaCAM05 = [];
+        // Estela real del trayecto ya recorrido por el camión.
+        // Inicia vacía y se va llenando SOLO con las coordenadas GPS
+        // reales que van llegando de Firebase (una por lectura real).
+        let estelaRutaReal = null;
+        let coordenadasEstelaReal = [];
 
         let audioContext = null;
         let sonidoHabilitado = false;
@@ -973,21 +890,21 @@
                 attribution: "&copy; OpenStreetMap contributors"
             }).addTo(map);
 
-            inicializarEstelaCAM05();
+            inicializarEstelaReal();
         }
 
         /* ============================================================
-           INICIALIZAR ESTELA DEL CAMIÓN
+           INICIALIZAR ESTELA DEL CAMIÓN (datos reales)
 
            La estela empieza vacía.
-           No muestra la ruta completa desde el inicio.
-           Solo se va llenando con las coordenadas que el camión
-           ya recorrió.
+           Solo se va llenando con las coordenadas GPS reales que
+           reporta el ESP32 (o el navegador, si el GPS real aún no
+           tiene señal).
         ============================================================ */
-        function inicializarEstelaCAM05() {
-            coordenadasEstelaCAM05 = [];
+        function inicializarEstelaReal() {
+            coordenadasEstelaReal = [];
 
-            estelaRutaCAM05 = L.polyline(coordenadasEstelaCAM05, {
+            estelaRutaReal = L.polyline(coordenadasEstelaReal, {
                 color: "#22c55e",
                 weight: 5,
                 opacity: 0.95,
@@ -997,11 +914,19 @@
         }
 
         /* ============================================================
-           SABER SI UN CAMIÓN TIENE ALERTA
+           SABER SI EL CAMIÓN TIENE ALERTA
+
+           Usa, en este orden:
+           1) El nivel de riesgo que ya calculó la IA (Gemini), si existe.
+           2) Como respaldo, el umbral simple de temperatura.
         ============================================================ */
         function camionTieneAlerta(camion) {
+            if (camion.nivelAlerta === "alerta" || camion.nivelAlerta === "critico") {
+                return true;
+            }
+
             const temperatura = Number(camion.temperaturaActualC);
-            return camion.alertaActiva === true || temperatura >= LIMITE_TEMPERATURA_ALTA;
+            return Number.isFinite(temperatura) && temperatura >= LIMITE_TEMPERATURA_ALTA;
         }
 
         /* ============================================================
@@ -1035,6 +960,10 @@
            ACTUALIZAR O CREAR MARCADOR DEL CAMIÓN
         ============================================================ */
         function actualizarMarcadorCamion(camion) {
+            // Todavía no ha llegado ninguna lectura real: no hay
+            // nada que dibujar en el mapa.
+            if (!camion.ubicacionActual) return;
+
             const posicion = [
                 camion.ubicacionActual.lat,
                 camion.ubicacionActual.lng
@@ -1063,185 +992,100 @@
         }
 
         /* ============================================================
-           INICIAR SIMULACIÓN SOBRE CALLES REALES
+           OBTENER UBICACIÓN DEL CAMIÓN (GPS real, con respaldo)
 
-           Aquí OSRM calcula la ruta real sobre calles.
-           Cuando encuentra la ruta, se llama a iniciarMovimientoSobreRutaReal().
+           1) Si la lectura trae lat/lng válidos (el GPS real del
+              ESP32 ya está funcionando), se usan esos.
+           2) Si no, se usa navigator.geolocation (ubicación del
+              navegador/celular) como respaldo temporal.
+           3) En cuanto vuelva a llegar una lectura con lat/lng
+              válidos, se regresa solo al GPS real.
+
+           Esta misma lógica ya la usa el modal de predicción de IA
+           (obtenerUbicacionDelVehiculo); aquí se reutiliza para que
+           el camión también se mueva en el mapa principal aunque el
+           GPS real todavía no tenga señal.
         ============================================================ */
-        function iniciarSimulacionMovimientoCAM05() {
-            const waypoints = puntosGuiaCAM05.map(punto => {
-                return L.latLng(punto[0], punto[1]);
-            });
-
-            controlRutaCAM05 = L.Routing.control({
-                waypoints: waypoints,
-                routeWhileDragging: false,
-                addWaypoints: false,
-                draggableWaypoints: false,
-                fitSelectedRoutes: true,
-                show: false,
-                createMarker: function () {
-                    return null;
-                },
-                // IMPORTANTE:
-                // Leaflet Routing Machine se usa solo para calcular las calles reales,
-                // pero la línea completa de la ruta queda invisible.
-                // Lo visible será únicamente la estela del camino ya recorrido.
-                lineOptions: {
-                    styles: [
-                        {
-                            color: "transparent",
-                            weight: 0,
-                            opacity: 0
-                        }
-                    ]
-                }
-            }).addTo(map);
-
-            controlRutaCAM05.on("routesfound", function (event) {
-                const ruta = event.routes[0];
-
-                coordenadasRutaRealCAM05 = ruta.coordinates.map(coord => {
-                    return {
-                        lat: coord.lat,
-                        lng: coord.lng
-                    };
-                });
-
-                console.log("Ruta real calculada:", coordenadasRutaRealCAM05.length, "puntos");
-
-                iniciarMovimientoSobreRutaReal();
-            });
-
-            controlRutaCAM05.on("routingerror", function (error) {
-                console.warn("No se pudo calcular ruta por calles. Se usará ruta simple.", error);
-
-                coordenadasRutaRealCAM05 = puntosGuiaCAM05.map(punto => {
-                    return {
-                        lat: punto[0],
-                        lng: punto[1]
-                    };
-                });
-
-                iniciarMovimientoSobreRutaReal();
-            });
+        function obtenerUbicacionCamionReal(datosCrudos) {
+            return obtenerUbicacionDelVehiculo(datosCrudos);
         }
 
         /* ============================================================
-           ESTA FUNCIÓN FALTABA EN TU CÓDIGO
+           ACTUALIZAR EL CAMIÓN CON UNA LECTURA REAL DEL ESP32
 
-           Inicia el intervalo que mueve el camión sobre la ruta calculada.
+           Esta función se llama cada vez que Firebase reporta una
+           lectura nueva en monitoreo/camion_01 (la sube puente.js
+           desde el ESP32 real). No hay nada simulado ni movimiento
+           automático: el camión solo se mueve cuando llega un dato
+           real.
         ============================================================ */
-        function iniciarMovimientoSobreRutaReal() {
-            if (!coordenadasRutaRealCAM05.length) {
-                console.warn("No hay coordenadas para mover el camión.");
-                return;
-            }
+        async function actualizarCamionConLecturaReal(datosCrudos) {
+            // El ESP32 puede mandar "lat"/"lng" o "latitud"/"longitud"
+            // (igual que normaliza puente.js antes de subir a Firebase).
+            const latCruda = datosCrudos.lat ?? datosCrudos.latitud ?? null;
+            const lngCruda = datosCrudos.lng ?? datosCrudos.lon ?? datosCrudos.longitud ?? null;
 
-            moverCAM05SobreRutaReal();
+            const ubicacion = await obtenerUbicacionCamionReal({
+                lat: Number(latCruda),
+                lng: Number(lngCruda)
+            });
+            if (!ubicacion) return; // sin GPS real ni del navegador, no hay nada que dibujar
 
-            intervaloMovimientoCAM05 = setInterval(() => {
-                moverCAM05SobreRutaReal();
-            }, INTERVALO_MOVIMIENTO_MS);
-        }
-
-        /* ============================================================
-           MOVER CAM-05 SOBRE LAS CALLES
-
-           Cada movimiento toma una coordenada real de la ruta.
-           También simula temperatura, humedad y velocidad.
-
-           En Firebase esto equivaldría a:
-           1. Actualizar camiones / CAM-05
-           2. Crear una lectura en camiones / CAM-05 / lecturas
-        ============================================================ */
-        function moverCAM05SobreRutaReal() {
-            if (indiceRutaRealCAM05 >= coordenadasRutaRealCAM05.length) {
-                clearInterval(intervaloMovimientoCAM05);
-                console.log("Simulación finalizada.");
-                return;
-            }
-
-            const punto = coordenadasRutaRealCAM05[indiceRutaRealCAM05];
-            const camion = camiones.find(item => item.id === "CAM-05");
-
-            if (!camion) return;
-
-            const porcentajeRuta = indiceRutaRealCAM05 / coordenadasRutaRealCAM05.length;
-
-            let temperaturaSimulada = 4.2;
-
-            if (porcentajeRuta > 0.35 && porcentajeRuta <= 0.55) {
-                temperaturaSimulada = 5.1;
-            } else if (porcentajeRuta > 0.55 && porcentajeRuta <= 0.8) {
-                temperaturaSimulada = 5.8;
-            } else if (porcentajeRuta > 0.8) {
-                temperaturaSimulada = 6.2;
-            }
-
-            const alerta = temperaturaSimulada >= LIMITE_TEMPERATURA_ALTA;
+            const temperaturaC = Number(
+                datosCrudos.temperatura ?? datosCrudos.temperaturaC ?? datosCrudos.temp
+            );
+            const humedadPct = Number(
+                datosCrudos.humedad ?? datosCrudos.humedadPct ?? datosCrudos.hum
+            );
+            const puertaAbierta = Boolean(datosCrudos.puerta ?? datosCrudos.puertaAbierta ?? false);
 
             const lectura = {
-                lat: punto.lat,
-                lng: punto.lng,
-                temperaturaC: temperaturaSimulada,
-                humedadPct: alerta ? 63 : 60,
-                velocidadKmh: alerta ? 30 : 42,
-                hora: obtenerHoraSimulada(),
-                kmRecorridosHoy: Math.round(10 + porcentajeRuta * 45)
+                lat: ubicacion.lat,
+                lng: ubicacion.lng,
+                temperaturaC: Number.isFinite(temperaturaC) ? temperaturaC : camionReal.temperaturaActualC,
+                humedadPct: Number.isFinite(humedadPct) ? humedadPct : camionReal.humedadActualPct,
+                hora: obtenerHoraActual()
             };
 
-            camion.ubicacionActual = {
-                lat: lectura.lat,
-                lng: lectura.lng
-            };
+            camionReal.ubicacionActual = { lat: lectura.lat, lng: lectura.lng };
+            camionReal.fuenteUbicacion = ubicacion.fuente;
+            camionReal.temperaturaActualC = lectura.temperaturaC;
+            camionReal.humedadActualPct = lectura.humedadPct;
+            camionReal.puertaAbierta = puertaAbierta;
+            camionReal.activo = true;
+            camionReal.estado = camionTieneAlerta(camionReal)
+                ? "Alerta - Temperatura elevada"
+                : "En ruta";
 
-            camion.velocidadKmh = lectura.velocidadKmh;
-            camion.temperaturaActualC = lectura.temperaturaC;
-            camion.humedadActualPct = lectura.humedadPct;
-            camion.kmRecorridosHoy = lectura.kmRecorridosHoy;
-            camion.alertaActiva = alerta;
-            camion.nivelAlerta = alerta ? "media" : "normal";
-            camion.estado = alerta ? "Alerta - Temperatura elevada" : "En ruta";
-
-            // Primero se agrega la coordenada a la estela.
-            // Así la línea solo aparece detrás del camión, no antes.
-            agregarPuntoAEstelaCAM05(lectura);
-
-            dibujarPuntoDeLecturaCAM05(lectura, indiceRutaRealCAM05);
-            actualizarMarcadorCamion(camion);
+            agregarPuntoAEstelaReal(lectura);
+            dibujarPuntoDeLecturaReal(lectura);
+            actualizarMarcadorCamion(camionReal);
+            actualizarBadgeFuente(ubicacion.fuente);
 
             map.panTo([lectura.lat, lectura.lng]);
 
             cargarTablaCamiones();
             actualizarMetricas();
             actualizarGraficaCamiones();
-            revisarAlertaCamion(camion, lectura);
-
-            indiceRutaRealCAM05 += PASO_COORDENADAS;
         }
 
         /* ============================================================
-           AGREGAR PUNTO A LA ESTELA DE CAM-05
+           AGREGAR PUNTO A LA ESTELA (datos reales)
 
-           Esta función representa lo que pasaría con un sensor GPS real:
-           cada lectura nueva se agrega al arreglo y la línea se actualiza.
-
-           En Firebase podrías guardar cada punto en:
-           camiones / CAM-05 / historialUbicaciones
+           Cada lectura real que llega se agrega al arreglo y la
+           línea se actualiza. En Firebase esto corresponde a cada
+           entrada de monitoreo/camion_01/historialLecturas.
         ============================================================ */
-        function agregarPuntoAEstelaCAM05(lectura) {
-            if (!estelaRutaCAM05) return;
+        function agregarPuntoAEstelaReal(lectura) {
+            if (!estelaRutaReal) return;
 
-            const nuevaCoordenada = [lectura.lat, lectura.lng];
-            coordenadasEstelaCAM05.push(nuevaCoordenada);
-
-            estelaRutaCAM05.setLatLngs(coordenadasEstelaCAM05);
+            coordenadasEstelaReal.push([lectura.lat, lectura.lng]);
+            estelaRutaReal.setLatLngs(coordenadasEstelaReal);
 
             // Cuando ya hay alerta, la estela cambia a rojo para indicar
             // que el recorrido reciente ocurrió con temperatura elevada.
             if (lectura.temperaturaC >= LIMITE_TEMPERATURA_ALTA) {
-                estelaRutaCAM05.setStyle({
+                estelaRutaReal.setStyle({
                     color: "#ef4444",
                     weight: 6,
                     opacity: 0.95
@@ -1250,16 +1094,12 @@
         }
 
         /* ============================================================
-           DIBUJAR PUNTOS DE LECTURA GPS
-
-           La ruta completa ya NO se dibuja desde el inicio.
-           La línea visible es la estela que se va formando con agregarPuntoAEstelaCAM05().
-           Estos puntos representan las lecturas que el camión va dejando.
+           DIBUJAR PUNTOS DE LECTURA GPS (reales)
 
            Azul = lectura normal
            Rojo = lectura con alerta
         ============================================================ */
-        function dibujarPuntoDeLecturaCAM05(lectura, indice) {
+        function dibujarPuntoDeLecturaReal(lectura) {
             const hayAlerta = lectura.temperaturaC >= LIMITE_TEMPERATURA_ALTA;
 
             L.circleMarker([lectura.lat, lectura.lng], {
@@ -1269,21 +1109,18 @@
                 fillOpacity: 0.9,
                 weight: 2
             }).addTo(map).bindPopup(`
-                <strong>${indice === 0 ? "Inicio de ruta" : "Lectura GPS"}</strong><br>
-                <b>Camión:</b> CAM-05<br>
+                <strong>Lectura GPS real</strong><br>
+                <b>Camión:</b> ${camionReal.id}<br>
                 <b>Hora:</b> ${lectura.hora}<br>
                 <b>Temperatura:</b> ${lectura.temperaturaC} °C<br>
-                <b>Velocidad:</b> ${lectura.velocidadKmh} km/h<br>
                 <b>Estado:</b> ${hayAlerta ? "Alerta de temperatura" : "Normal"}
             `);
         }
 
         /* ============================================================
-           HORA SIMULADA PARA CADA LECTURA
-
-           En Firebase esto sería un timestamp real.
+           HORA ACTUAL PARA CADA LECTURA
         ============================================================ */
-        function obtenerHoraSimulada() {
+        function obtenerHoraActual() {
             const ahora = new Date();
 
             const horas = String(ahora.getHours()).padStart(2, "0");
@@ -1310,6 +1147,7 @@
                     <td class="${tieneAlerta ? "estado-alerta-tabla" : ""}">
                         ${camion.estado}
                     </td>
+                    <td>(real-Hospital General de México)</td>
                     <td>${camion.velocidadKmh} km/h</td>
                     <td>${camion.temperaturaActualC} °C</td>
                 `;
@@ -1428,53 +1266,13 @@
         }
 
         /* ============================================================
-           ALERTAS AUTOMÁTICAS SIN BOTÓN
+           ALERTAS
+
+           El popup y el modal de predicción real los dispara el
+           bloque de Firebase (mostrarPopupAlertaIA / abrirModalPrediccionIA),
+           que lee monitoreo/camion_01/analisisIA generado por Gemini.
+           Aquí solo queda la función para cerrar el popup manualmente.
         ============================================================ */
-        function revisarAlertaCamion(camion, lectura) {
-            if (!camionTieneAlerta(camion)) return;
-
-            const claveAlerta = `${camion.id}-${lectura.hora}-${camion.temperaturaActualC}`;
-
-            if (!alertasVisualesMostradas.has(claveAlerta)) {
-                alertasVisualesMostradas.add(claveAlerta);
-                mostrarPopupAlerta(camion, lectura);
-                vibracionMovil();
-            }
-
-            if (sonidoHabilitado && !alertasSonorasReproducidas.has(claveAlerta)) {
-                alertasSonorasReproducidas.add(claveAlerta);
-                sonidoAlarma();
-            }
-
-            if (
-                "Notification" in window &&
-                Notification.permission === "granted" &&
-                !notificacionesMostradas.has(claveAlerta)
-            ) {
-                notificacionesMostradas.add(claveAlerta);
-                notificacionNavegador(camion.id, camion.temperaturaActualC);
-            }
-        }
-
-        function mostrarPopupAlerta(camion, lectura) {
-            const popup = document.getElementById("popupAlertaConductor");
-            const camionId = document.getElementById("alertaCamionId");
-            const temperatura = document.getElementById("alertaTemperatura");
-            const mensaje = document.getElementById("alertaMensaje");
-
-            camionId.textContent = `Camión: ${camion.id} | Velocidad: ${camion.velocidadKmh} km/h | Hora: ${lectura.hora}`;
-            temperatura.textContent = `${camion.temperaturaActualC} °C`;
-
-            mensaje.textContent =
-                `El cargamento del ${camion.id} superó el límite permitido de ${LIMITE_TEMPERATURA_ALTA}°C.`;
-
-            popup.classList.add("show");
-
-            setTimeout(() => {
-                popup.classList.remove("show");
-            }, 12000);
-        }
-
         function cerrarPopupAlerta() {
             document.getElementById("popupAlertaConductor").classList.remove("show");
         }
@@ -1513,13 +1311,10 @@
                         await Notification.requestPermission();
                     }
 
-                    const camion05 = camiones.find(camion => camion.id === "CAM-05");
-
-                    if (camion05) {
-                        revisarAlertaCamion(camion05, {
-                            hora: obtenerHoraSimulada()
-                        });
-                    }
+                    // Ya no se dispara ninguna alerta de prueba aquí: esto
+                    // solo desbloquea el audio/notificaciones. Las alertas
+                    // reales llegan solas desde Firebase cuando Gemini
+                    // detecta riesgo.
 
                     document.removeEventListener("click", activarFunciones);
                     document.removeEventListener("touchstart", activarFunciones);
@@ -1823,6 +1618,11 @@
             const overlay = document.getElementById("modalPrediccionIA");
             overlay.classList.add("show");
 
+            const tarjetaModal = document.getElementById("modalIACard");
+            const encabezadoModal = document.getElementById("modalIAHeader");
+            tarjetaModal.classList.add("modal-ia-alerta");
+            encabezadoModal.classList.add("modal-ia-header-alerta");
+
             actualizarBadgeRiesgo(analisis);
 
             document.getElementById("modalIAConsola").innerHTML = `
@@ -1875,26 +1675,24 @@
             document.getElementById("modalPrediccionIA").classList.remove("show");
         }
 
-        // Botón "Probar predicción IA": útil mientras el GPS real no funciona
-        // y/o Gemini todavía no ha mandado ninguna alerta real, para poder
-        // seguir avanzando en la interfaz sin depender del hardware.
-        function probarModalPrediccionIA() {
-            abrirModalPrediccionIA(
-                {
-                    nivelRiesgo: "alerta",
-                    probabilidadFallaPct: 82,
-                    prediccion: "La temperatura seguirá bajando fuera de rango en los próximos minutos si no se corrige.",
-                    mensaje: "Se detectó una caída sostenida de temperatura por debajo del límite seguro.",
-                    accionRecomendada: "Detente en un lugar seguro y revisa el sistema de refrigeración.",
-                    temperaturaAnalizadaC: 1.8,
-                    lat: null,
-                    lng: null
-                },
-                "camion_01 (prueba)"
-            );
-        }
-        window.probarModalPrediccionIA = probarModalPrediccionIA;
         window.cerrarModalPrediccionIA = cerrarModalPrediccionIA;
+
+        // Se expone para que el listener de Firebase (más abajo) pueda
+        // llamarla cada vez que llega una lectura real del ESP32.
+        window.actualizarCamionConLecturaReal = actualizarCamionConLecturaReal;
+
+        // Actualiza el nivel de riesgo del camión con lo que calculó Gemini
+        // (normal / atencion / alerta / critico) y refresca su ícono en
+        // el mapa y la tabla para que se vea rojo y parpadeando.
+        function actualizarNivelAlertaCamionReal(nivelRiesgo) {
+            camionReal.nivelAlerta = nivelRiesgo;
+            camionReal.alertaActiva = camionTieneAlerta(camionReal);
+            actualizarMarcadorCamion(camionReal);
+            cargarTablaCamiones();
+            actualizarMetricas();
+            actualizarGraficaCamiones();
+        }
+        window.actualizarNivelAlertaCamionReal = actualizarNivelAlertaCamionReal;
 
         /* ============================================================
            INICIALIZACIÓN GENERAL
@@ -1908,8 +1706,9 @@
         // Prepara sonido y notificación, pero sin botón visible.
         prepararFuncionesDeNotificacionSinBoton();
 
-        // Inicia la simulación del movimiento siguiendo calles.
-        iniciarSimulacionMovimientoCAM05();
+        // Ya no se simula ningún movimiento: el camión solo se mueve
+        // cuando Firebase reporta una lectura real (ver el listener
+        // de monitoreo/camion_01 más abajo).
     </script>
 
     <!-- ============================================================
@@ -1941,8 +1740,23 @@
         const db = getDatabase(appRTDB);
         const refAnalisisIA = ref(db, `monitoreo/${CAMION_ID_REAL}/analisisIA`);
 
+        // Lectura cruda del ESP32 (temperatura, humedad, puerta, lat/lng).
+        // La sube puente.js con un PATCH directo a monitoreo/camion_01,
+        // así que se dispara cada vez que llega un dato nuevo del sensor.
+        const refLecturaCruda = ref(db, `monitoreo/${CAMION_ID_REAL}`);
+
         const nivelesConAlerta = new Set(["alerta", "critico"]);
         const analisisIAYaMostrados = new Set();
+
+        onValue(refLecturaCruda, (snapshot) => {
+            const datos = snapshot.val();
+            if (!datos) return;
+
+            // Mueve el camión real en el mapa con esta lectura.
+            if (typeof window.actualizarCamionConLecturaReal === "function") {
+                window.actualizarCamionConLecturaReal(datos);
+            }
+        });
 
         onValue(refAnalisisIA, (snapshot) => {
             const analisis = snapshot.val();
@@ -2005,6 +1819,13 @@
 
             if (typeof actualizarBadgeRiesgo === "function") {
                 actualizarBadgeRiesgo(analisis);
+            }
+
+            // Le pasa el nivel de riesgo real (calculado por Gemini) al
+            // camión, para que su marcador en el mapa se ponga rojo y
+            // parpadee cuando el riesgo es "alerta" o "critico".
+            if (typeof window.actualizarNivelAlertaCamionReal === "function") {
+                window.actualizarNivelAlertaCamionReal(analisis.nivelRiesgo);
             }
         }
     </script>

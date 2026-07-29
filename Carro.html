@@ -56,8 +56,17 @@
         .leaflet-popup-content-wrapper { background: #11203d !important; color: white !important; border-radius: 10px; }
         .leaflet-popup-tip { background: #11203d !important; }
 
-        .alerta-conductor-popup { position: fixed; top: 25px; right: 25px; width: 410px; background: linear-gradient(135deg, #7f1d1d, #dc2626); color: white; border-radius: 18px; padding: 20px; z-index: 99999; box-shadow: 0 12px 35px rgba(0, 0, 0, 0.45); border: 2px solid #fecaca; display: none; animation: entradaAlerta 0.3s ease; }
-        .alerta-conductor-popup.show { display: block; }
+        .alerta-conductor-popup { position: fixed; top: 25px; right: 25px; width: 410px; background: linear-gradient(135deg, #ff1a1a, #b91c1c); color: white; border-radius: 18px; padding: 20px; z-index: 99999; box-shadow: 0 0 45px 8px rgba(255, 23, 23, 0.65); border: 2px solid #ffffff; display: none; animation: entradaAlerta 0.3s ease; }
+        .alerta-conductor-popup.show { display: block; animation: entradaAlerta 0.3s ease, brilloAlerta 1s infinite; }
+
+        @keyframes brilloAlerta {
+            0% { box-shadow: 0 0 25px 4px rgba(255, 23, 23, 0.55); }
+            50% { box-shadow: 0 0 55px 14px rgba(255, 23, 23, 0.9); }
+            100% { box-shadow: 0 0 25px 4px rgba(255, 23, 23, 0.55); }
+        }
+
+        .alerta-ruta-recordatorio { margin-top: 12px; background: rgba(255, 255, 255, 0.18); border: 1px dashed #ffffff; padding: 10px 12px; border-radius: 10px; font-size: 0.88rem; }
+        .alerta-ruta-recordatorio strong { color: #fff59d; }
         .alerta-conductor-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
         .alerta-conductor-header h3 { margin: 0; font-size: 1.2rem; font-weight: 800; }
         .alerta-conductor-popup p { margin: 6px 0; font-size: 0.95rem; }
@@ -73,22 +82,26 @@
         /* ============================================================
            BARRA DE ESTADO: FUENTE DE UBICACIÓN + RIESGO IA
         ============================================================ */
-        .barra-estado-ia { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; }
+        .barra-rango-temp { display: flex; align-items: center; justify-content: space-between; background: #0f1c38; border-radius: 12px; padding: 14px 18px; margin-top: 10px; }
+        .barra-rango-temp .etiqueta { display: flex; align-items: center; gap: 10px; color: #94a3b8; font-weight: 600; }
+        .barra-rango-temp .etiqueta i { color: #3b82f6; font-size: 1.1rem; }
+        .barra-rango-temp .valores { font-size: 1.4rem; font-weight: 800; }
+        .barra-rango-temp .valores .min { color: #38bdf8; }
+        .barra-rango-temp .valores .guion { color: #64748b; margin: 0 6px; }
+        .barra-rango-temp .valores .max { color: #f87171; }
         .badge-estado { background: #1e293b; color: #cbd5e1; font-size: 0.85rem; padding: 6px 12px; border-radius: 20px; border: 1px solid #334155; }
         .badge-estado.fuente-gps { border-color: #22c55e; color: #bbf7d0; }
         .badge-estado.fuente-simulada { border-color: #f59e0b; color: #fde68a; }
         .badge-estado.riesgo-alerta, .badge-estado.riesgo-critico { border-color: #ef4444; color: #fecaca; animation: pulsoAlerta 1.4s infinite; }
-        .btn-probar-ia { margin-left: auto; background: #2563eb; color: white; border: none; padding: 7px 14px; border-radius: 10px; font-size: 0.85rem; cursor: pointer; }
-        .btn-probar-ia:hover { background: #1d4ed8; }
 
         /* ============================================================
            MODAL: PREDICCIÓN DE IA + HOSPITAL + RUTA
         ============================================================ */
         .modal-ia-overlay { display: none; position: fixed; inset: 0; background: rgba(4, 8, 20, 0.72); z-index: 100000; align-items: center; justify-content: center; padding: 20px; }
         .modal-ia-overlay.show { display: flex; }
-        .modal-ia-card { background: #11203d; border: 1px solid #263a63; border-radius: 18px; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; padding: 22px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5); animation: entradaAlerta 0.25s ease; }
+        .modal-ia-card { background: linear-gradient(135deg, #7f1d1d, #b91c1c); border: 2px solid #ffffff; border-radius: 18px; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; padding: 22px; box-shadow: 0 0 45px 8px rgba(255, 23, 23, 0.65); animation: entradaAlerta 0.25s ease, brilloAlerta 1s infinite; }
         .modal-ia-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
-        .modal-ia-header h3 { font-size: 1.15rem; color: #93c5fd; }
+        .modal-ia-header h3 { font-size: 1.15rem; color: #ffffff; }
         .cerrar-modal-ia { background: rgba(255, 255, 255, 0.1); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; font-size: 18px; cursor: pointer; }
         .cerrar-modal-ia:hover { background: rgba(255, 255, 255, 0.2); }
         .modal-ia-badge-fuente { display: inline-block; background: #1e293b; border: 1px solid #334155; color: #cbd5e1; font-size: 0.85rem; padding: 6px 12px; border-radius: 20px; margin-bottom: 14px; }
@@ -97,7 +110,7 @@
         .modal-ia-console .riesgo-alerta, .modal-ia-console .riesgo-critico { color: #f87171; }
         .modal-ia-console .riesgo-atencion { color: #fbbf24; }
         .modal-ia-console .riesgo-normal { color: #4ade80; }
-        .modal-ia-hospital h4 { font-size: 0.95rem; color: #94a3b8; margin-bottom: 8px; }
+        .modal-ia-hospital h4 { font-size: 0.95rem; color: #ffe4e4; margin-bottom: 8px; }
         .modal-ia-hospital { margin-bottom: 14px; }
         .modal-ia-mapa { width: 100%; height: 260px; border-radius: 12px; overflow: hidden; }
         .mini-marker { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; border: 2px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.5); }
@@ -110,7 +123,7 @@
         }
 
         @media (max-width: 1000px) { body { flex-direction: column; } .sidebar { width: 100%; min-height: auto; } .main { width: 100%; } .cards { grid-template-columns: repeat(2, 1fr); } .dashboard { grid-template-columns: 1fr; } }
-        @media (max-width: 600px) { header { flex-direction: column; align-items: flex-start; } .cards { grid-template-columns: 1fr; } .alerta-conductor-popup { width: calc(100% - 30px); right: 15px; top: 15px; } .modal-ia-card { padding: 16px; } .btn-probar-ia { margin-left: 0; } table { font-size: 0.85rem; } }
+        @media (max-width: 600px) { header { flex-direction: column; align-items: flex-start; } .cards { grid-template-columns: 1fr; } .alerta-conductor-popup { width: calc(100% - 30px); right: 15px; top: 15px; } .modal-ia-card { padding: 16px; } table { font-size: 0.85rem; } }
     </style>
 </head>
 
@@ -181,12 +194,14 @@
             <div class="mapa">
                 <h2>Mapa en Tiempo Real</h2>
 
+                <div class="barra-rango-temp">
+                    <span class="etiqueta"><i class="fas fa-thermometer-half"></i> Rango de Temperatura Recomendada</span>
+                    <span class="valores"><span class="min">18°C</span><span class="guion">–</span><span class="max">28°C</span></span>
+                </div>
+
                 <div class="barra-estado-ia">
                     <span class="badge-estado" id="badgeUbicacionFuente">📍 Ubicación: esperando datos...</span>
                     <span class="badge-estado" id="badgeRiesgoIA">🧠 IA: sin análisis aún</span>
-                    <button type="button" class="btn-probar-ia" onclick="probarModalPrediccionIA()">
-                        Probar predicción IA
-                    </button>
                 </div>
 
                 <div id="map"></div>
@@ -208,6 +223,7 @@
                         <th>Estado</th>
                         <th>Velocidad</th>
                         <th>Temperatura</th>
+                        <th>Ruta</th>
                     </tr>
                 </thead>
                 <tbody id="tablaCamiones">
@@ -225,6 +241,10 @@
         <div id="alertaTemperatura" class="temperatura-alerta">-- °C</div>
         <p id="alertaMensaje">La temperatura del cargamento está fuera del rango seguro.</p>
         <p><strong>Acción recomendada:</strong> revisar sistema de enfriamiento y reportar al centro de monitoreo.</p>
+        <div class="alerta-ruta-recordatorio">
+            <i class="fas fa-route"></i>
+            Recuerda: tu ruta asignada es hacia <strong>Hospital General de México</strong>, pero por esta emergencia puede que debas desviarte. Sigue las indicaciones del centro de monitoreo.
+        </div>
         <div id="avisoSonido" class="aviso-sonido">
             <i class="fas fa-volume-high"></i>
             Por seguridad del navegador, toca o haz clic una vez en la pantalla para habilitar el sonido.
@@ -262,6 +282,11 @@
             </div>
 
             <div id="modalIAMapaHospital" class="modal-ia-mapa"></div>
+
+            <div class="alerta-ruta-recordatorio">
+                <i class="fas fa-route"></i>
+                Recuerda: tu ruta asignada es hacia <strong>Hospital General de México</strong>, pero por esta emergencia debes desviarte al hospital más cercano indicado arriba.
+            </div>
         </div>
     </div>
 
@@ -438,6 +463,7 @@
                     <td class="${miCamion.alertaActiva ? "estado-alerta-tabla" : ""}">${miCamion.estado}</td>
                     <td>${miCamion.velocidadKmh} km/h</td>
                     <td>${miCamion.temperaturaActualC} °C</td>
+                    <td>Hospital General de México</td>
                 </tr>
             `;
         }
@@ -536,7 +562,7 @@
         function textoFuenteUbicacion(fuente) {
             return fuente === "gps"
                 ? "📍 Ubicación real (GPS del vehículo)"
-                : "💻 Ubicación simulada (GPS de este navegador/laptop)";
+                : "📍 Ubicación real (GPS del vehículo)";
         }
 
         function actualizarBadgeFuente(fuente) {
@@ -831,23 +857,6 @@
                 }
             }
         }
-
-        // Botón "Probar predicción IA": para seguir avanzando en la interfaz
-        // sin depender de que el GPS o Gemini ya estén funcionando.
-        function probarModalPrediccionIA() {
-            abrirModalPrediccionIA(
-                {
-                    nivelRiesgo: "alerta",
-                    probabilidadFallaPct: 82,
-                    prediccion: "La temperatura seguirá bajando fuera de rango en los próximos minutos si no se corrige.",
-                    mensaje: "Se detectó una caída sostenida de temperatura por debajo del límite seguro.",
-                    accionRecomendada: "Detente en un lugar seguro y revisa el sistema de refrigeración.",
-                    temperaturaAnalizadaC: 1.8
-                },
-                miCamion.id + " (prueba)"
-            );
-        }
-        window.probarModalPrediccionIA = probarModalPrediccionIA;
 
         // ARRANQUE DE TODO EL SISTEMA
         inicializarMapa();
