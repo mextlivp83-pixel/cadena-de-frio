@@ -680,14 +680,34 @@
         }
 
         // Prueba radios cada vez más grandes hasta encontrar un hospital.
+        // Antes de llamar a la API, revisa un caché en sessionStorage: si
+        // ya buscamos un hospital cerca de esta misma zona hace poco, lo
+        // reutilizamos en vez de volver a golpear Overpass (evita el 429
+        // de "demasiadas peticiones" al abrir el modal varias veces
+        // seguidas mientras se prueba).
+        function claveCacheHospital(lat, lng) {
+            // Redondeamos a ~1 km para que pequeños movimientos del GPS
+            // sigan usando el mismo resultado en caché.
+            return `hospitalCercano:${lat.toFixed(2)}:${lng.toFixed(2)}`;
+        }
+
         async function buscarHospitalCercano(lat, lng) {
             ultimoErrorBusquedaHospital = null;
+            const clave = claveCacheHospital(lat, lng);
+
+            try {
+                const enCache = sessionStorage.getItem(clave);
+                if (enCache) return JSON.parse(enCache);
+            } catch (error) {
+                // si sessionStorage falla (modo incógnito, etc.) simplemente seguimos sin caché
+            }
 
             for (const radioMetros of RADIOS_BUSQUEDA_HOSPITAL_M) {
                 try {
                     const encontrado = await buscarHospitalesEnRadio(lat, lng, radioMetros);
                     if (encontrado) {
                         encontrado.radioBusquedaKm = radioMetros / 1000;
+                        try { sessionStorage.setItem(clave, JSON.stringify(encontrado)); } catch (error) {}
                         return encontrado;
                     }
                 } catch (error) {

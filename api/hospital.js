@@ -9,6 +9,37 @@ const SERVIDORES_OVERPASS = [
     "https://overpass.private.coffee/api/interpreter"
 ];
 
+function esperar(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Llama a un servidor Overpass. Si responde 429 (demasiadas peticiones,
+// típico de las instancias públicas gratuitas), espera un momento y
+// reintenta ese mismo servidor una vez antes de darlo por perdido.
+async function llamarOverpass(servidor, consulta) {
+    for (let intento = 0; intento < 2; intento++) {
+        const respuesta = await fetch(servidor, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain" },
+            body: consulta
+        });
+
+        if (respuesta.status === 429) {
+            if (intento === 0) {
+                await esperar(1500);
+                continue; // reintenta este mismo servidor una vez
+            }
+            throw new Error(`Overpass (${servidor}) respondió con código 429 (límite de peticiones)`);
+        }
+
+        if (!respuesta.ok) {
+            throw new Error(`Overpass (${servidor}) respondió con código ${respuesta.status}`);
+        }
+
+        return respuesta.json();
+    }
+}
+
 module.exports = async function handler(req, res) {
     const { lat, lng, radio } = req.query;
 
@@ -22,17 +53,7 @@ module.exports = async function handler(req, res) {
 
     for (const servidor of SERVIDORES_OVERPASS) {
         try {
-            const respuesta = await fetch(servidor, {
-                method: "POST",
-                headers: { "Content-Type": "text/plain" },
-                body: consulta
-            });
-
-            if (!respuesta.ok) {
-                throw new Error(`Overpass (${servidor}) respondió con código ${respuesta.status}`);
-            }
-
-            const datos = await respuesta.json();
+            const datos = await llamarOverpass(servidor, consulta);
             return res.status(200).json(datos);
         } catch (error) {
             console.error(`Error consultando ${servidor}:`, error.message);
