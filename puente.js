@@ -23,7 +23,7 @@ const FIREBASE_URL_LECTURA = `${FIREBASE_BASE}/${CAMION_ID}.json`;
 const FIREBASE_URL_ANALISIS_IA = `${FIREBASE_BASE}/${CAMION_ID}/analisisIA.json`;
 const FIREBASE_URL_HISTORIAL = `${FIREBASE_BASE}/${CAMION_ID}/historialLecturas.json`;
 
-const PUERTO_COM = process.env.PUERTO_COM || 'COM16';
+const PUERTO_COM = process.env.PUERTO_COM || 'COM5';
 
 // Tu API key de Gemini SIEMPRE debe venir de una variable de entorno.
 // Nunca la escribas directo en este archivo ni en el frontend.
@@ -63,6 +63,7 @@ console.log(`[+] Camión: ${CAMION_ID}`);
 console.log(`[+] Lecturas -> ${FIREBASE_URL_LECTURA}`);
 console.log(`[+] Análisis IA -> ${FIREBASE_URL_ANALISIS_IA}`);
 
+
 parser.on('data', async (linea) => {
   try {
     if (!linea.startsWith('{')) return;
@@ -100,12 +101,20 @@ parser.on('data', async (linea) => {
 // Ajusta los nombres de campo aquí si tu ESP32 usa otros nombres.
 // ------------------------------------------------------------
 function normalizarLectura(datos) {
+  // El ESP32 manda "latitud"/"longitud" (string "Buscando..." cuando el GPS
+  // todavía no tiene señal). Number("Buscando...") da NaN, así que con
+  // Number.isFinite lo convertimos a null automáticamente en ese caso.
+  const latCruda = datos.lat ?? datos.latitud ?? null;
+  const lngCruda = datos.lng ?? datos.lon ?? datos.longitud ?? null;
+  const latNum = Number(latCruda);
+  const lngNum = Number(lngCruda);
+
   return {
     temperaturaC: Number(datos.temperatura ?? datos.temperaturaC ?? datos.temp),
     humedadPct: Number(datos.humedad ?? datos.humedadPct ?? datos.hum),
     puertaAbierta: Boolean(datos.puerta ?? datos.puertaAbierta ?? false),
-    lat: datos.lat ?? null,
-    lng: datos.lng ?? datos.lon ?? null,
+    lat: Number.isFinite(latNum) ? latNum : null,
+    lng: Number.isFinite(lngNum) ? lngNum : null,
     timestamp: new Date().toISOString()
   };
 }
@@ -225,6 +234,11 @@ async function subirAnalisisIA(analisis, lectura) {
   const payload = {
     ...analisis,
     temperaturaAnalizadaC: lectura.temperaturaC,
+    // Mandamos lat/lng tal cual los reporta el ESP32 (pueden venir null si el
+    // sensor GPS todavía no funciona). El frontend decide qué hacer con eso:
+    // si vienen null, usa la ubicación del navegador como respaldo.
+    lat: lectura.lat,
+    lng: lectura.lng,
     generadoEn: new Date().toISOString()
   };
 

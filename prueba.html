@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoreo de Flota - Cadena de Frío | Estela de Ruta</title>
+
+    <!-- ============================================================
+         LIBRERÍAS EXTERNAS
+    ============================================================ -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css">
+
+    <style>
+        /* ============================================================
+           ESTILOS BASE
+        ============================================================ */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+        body { background: #0a1020; color: white; display: flex; width: 100vw; overflow-x: hidden; }
+
+        .sidebar { width: 250px; min-height: 100vh; background-color: #203057 !important; padding: 24px; flex-shrink: 0; box-shadow: 4px 0 15px rgba(0,0,0,0.1); }
+        .nav-link-custom { color: #94a3b8 !important; font-size: 1.1rem; font-weight: 500; padding: 14px 18px; border-radius: 10px; transition: all 0.2s ease; display: flex; align-items: center; gap: 15px; text-decoration: none; margin-bottom: 8px; }
+        .nav-link-custom:hover { background-color: #1e293b; color: #3d5f99 !important; }
+        .nav-link-custom.active { background-color: #1e293b; color: #f8fafc !important; border-left: 5px solid #3b82f6; }
+
+        .main { flex: 1; padding: 20px; display: flex; flex-direction: column; width: calc(100vw - 250px); }
+        header { display: flex; justify-content: space-between; align-items: center; gap: 15px; margin-bottom: 20px; }
+
+        .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; width: 100%; }
+        .card { background: #16233f; padding: 20px; border-radius: 15px; border: none; }
+        .card h3 { display: flex; align-items: center; gap: 10px; font-size: 1.05rem; margin-bottom: 10px; color: #94a3b8 !important; font-weight: 600; }
+        .card h3 i { color: #3b82f6 !important; }
+        .card p { font-size: 30px; font-weight: bold; margin: 0; color: #ffffff !important; }
+
+        .rango-temp-box { background: #16233f; padding: 20px; border-radius: 15px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px; }
+        .rango-temp-box h3 { display: flex; align-items: center; gap: 10px; font-size: 1.05rem; margin: 0; color: #94a3b8; font-weight: 600; }
+        .rango-temp-box h3 i { color: #3b82f6; }
+        .rango-temp-box .rango-valor { font-size: 28px; font-weight: bold; color: #ffffff; }
+        .rango-temp-box .rango-valor .min { color: #38bdf8; }
+        .rango-temp-box .rango-valor .max { color: #f87171; }
+
+        .dashboard { display: grid; grid-template-columns: 65% calc(35% - 15px); gap: 15px; width: 100%; }
+        .mapa, .grafica { background: #16233f; border-radius: 15px; padding: 15px; display: flex; flex-direction: column; }
+        #map { width: 100%; height: 430px; margin-top: 10px; border-radius: 10px; z-index: 1; }
+        .grafica-container { width: 100%; flex: 1; min-height: 400px; margin-top: 15px; }
+
+        .leaflet-routing-container { display: none !important; }
+
+        .custom-truck-icon { background: none; border: none; }
+        .truck-marker-wrapper { background: #2196f3; color: white; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0px 2px 5px rgba(0,0,0,0.5); font-size: 16px; }
+        .truck-marker-wrapper.alerta { background: #ef4444; animation: pulsoAlerta 1s infinite; }
+
+        @keyframes pulsoAlerta { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { transform: scale(1.08); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+
+        .tabla { margin-top: 20px; background: #16233f; padding: 20px; border-radius: 15px; width: 100%; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #334155; padding: 12px; text-align: center; }
+        th { background: #1e3a8a; }
+        .estado-alerta-tabla { color: #fecaca; font-weight: bold; }
+
+        .leaflet-popup-content-wrapper { background: #11203d !important; color: white !important; border-radius: 10px; }
+        .leaflet-popup-tip { background: #11203d !important; }
+
+        .alerta-conductor-popup { position: fixed; top: 25px; right: 25px; width: 410px; background: linear-gradient(135deg, #7f1d1d, #dc2626); color: white; border-radius: 18px; padding: 20px; z-index: 99999; box-shadow: 0 12px 35px rgba(0, 0, 0, 0.45); border: 2px solid #fecaca; display: none; animation: entradaAlerta 0.3s ease; }
+        .alerta-conductor-popup.show { display: block; }
+        .alerta-conductor-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+        .alerta-conductor-header h3 { margin: 0; font-size: 1.2rem; font-weight: 800; }
+        .alerta-conductor-popup p { margin: 6px 0; font-size: 0.95rem; }
+        .alerta-conductor-popup .temperatura-alerta { font-size: 2rem; font-weight: 900; margin: 10px 0; }
+        .cerrar-alerta { background: rgba(255, 255, 255, 0.18); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; font-size: 18px; cursor: pointer; }
+        .cerrar-alerta:hover { background: rgba(255, 255, 255, 0.3); }
+        .aviso-sonido { margin-top: 10px; background: rgba(255, 255, 255, 0.15); padding: 8px 10px; border-radius: 10px; font-size: 0.85rem; }
+
+        @keyframes entradaAlerta { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        .barra-estado-ia { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; }
+        .badge-estado { background: #1e293b; color: #cbd5e1; font-size: 0.85rem; padding: 6px 12px; border-radius: 20px; border: 1px solid #334155; }
+        .badge-estado.fuente-gps { border-color: #22c55e; color: #bbf7d0; }
+        .badge-estado.fuente-simulada { border-color: #f59e0b; color: #fde68a; }
+        .badge-estado.riesgo-alerta, .badge-estado.riesgo-critico { border-color: #ef4444; color: #fecaca; animation: pulsoAlerta 1.4s infinite; }
+        .btn-probar-ia { margin-left: auto; background: #2563eb; color: white; border: none; padding: 7px 14px; border-radius: 10px; font-size: 0.85rem; cursor: pointer; }
+        .btn-probar-ia:hover { background: #1d4ed8; }
+
+        .modal-ia-overlay { display: none; position: fixed; inset: 0; background: rgba(4, 8, 20, 0.72); z-index: 100000; align-items: center; justify-content: center; padding: 20px; }
+        .modal-ia-overlay.show { display: flex; }
+        .modal-ia-card { background: #11203d; border: 1px solid #263a63; border-radius: 18px; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; padding: 22px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5); animation: entradaAlerta 0.25s ease; }
+        .modal-ia-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+        .modal-ia-header h3 { font-size: 1.15rem; color: #93c5fd; }
+        .cerrar-modal-ia { background: rgba(255, 255, 255, 0.1); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; font-size: 18px; cursor: pointer; }
+        .cerrar-modal-ia:hover { background: rgba(255, 255, 255, 0.2); }
+        .modal-ia-badge-fuente { display: inline-block; background: #1e293b; border: 1px solid #334155; color: #cbd5e1; font-size: 0.85rem; padding: 6px 12px; border-radius: 20px; margin-bottom: 14px; }
+        .modal-ia-console { background: #060c1a; border: 1px solid #1e293b; border-radius: 10px; padding: 14px; font-family: "Consolas", "Courier New", monospace; font-size: 0.85rem; color: #86efac; line-height: 1.6; margin-bottom: 16px; }
+        .modal-ia-console .consola-etiqueta { color: #64748b; }
+        .modal-ia-console .riesgo-alerta, .modal-ia-console .riesgo-critico { color: #f87171; }
+        .modal-ia-console .riesgo-atencion { color: #fbbf24; }
+        .modal-ia-console .riesgo-normal { color: #4ade80; }
+        .modal-ia-hospital h4 { font-size: 0.95rem; color: #94a3b8; margin-bottom: 8px; }
+        .modal-ia-hospital { margin-bottom: 14px; }
+        .modal-ia-mapa { width: 100%; height: 260px; border-radius: 12px; overflow: hidden; }
+        .mini-marker { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; border: 2px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.5); }
+        .mini-marker-camion { background: #2196f3; }
+        .mini-marker-hospital { background: #ef4444; }
+
+        @media (max-width: 1000px) { body { flex-direction: column; } .sidebar { width: 100%; min-height: auto; } .main { width: 100%; } .cards { grid-template-columns: repeat(2, 1fr); } .dashboard { grid-template-columns: 1fr; } }
+        @media (max-width: 600px) { header { flex-direction: column; align-items: flex-start; } .cards { grid-template-columns: 1fr; } .rango-temp-box { flex-direction: column; align-items: flex-start; } .alerta-conductor-popup { width: calc(100% - 30px); right: 15px; top: 15px; } .modal-ia-card { padding: 16px; } .btn-probar-ia { margin-left: 0; } table { font-size: 0.85rem; } }
+
+        .panel-ruta-activa { margin-top: 10px; padding: 11px 16px; background: #0f1e38; border: 1px solid #263a63; border-radius: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; transition: border-color .35s, background .35s; }
+        .panel-ruta-activa.emergencia { border-color: #ef4444; background: #1a0808; }
+        .pra-label { font-size: .72rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: #64748b; flex-basis: 100%; }
+        .pra-label.emergencia { color: #f87171; }
+        .pra-paso { display: flex; align-items: center; gap: 6px; font-size: .9rem; }
+        .ico-origen  { color: #22c55e; }
+        .ico-destino { color: #3b82f6; }
+        .ico-emerg   { color: #ef4444; }
+        .pra-flecha  { color: #64748b; }
+        .pra-nombre  { font-weight: 600; }
+        .pra-meta    { margin-left: auto; display: flex; gap: 10px; font-size: .8rem; color: #94a3b8; }
+        .pra-meta .urgente { color: #fbbf24; font-weight: 700; }
+
+        .bloque-cambio-ruta { margin-top: 14px; background: rgba(0,0,0,.25); border-radius: 12px; padding: 13px 14px; border: 1px solid rgba(255,255,255,.14); }
+        .bcr-titulo { font-size: .71rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: #fca5a5; margin-bottom: 10px; }
+        .bcr-linea  { display: flex; align-items: flex-start; gap: 9px; margin-bottom: 6px; }
+        .bcr-ico    { font-size: .95rem; margin-top: 2px; min-width: 18px; text-align: center; }
+        .bcr-etq    { font-size: .69rem; color: #fca5a5; font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 1px; }
+        .bcr-val    { font-weight: 600; font-size: .91rem; }
+        .bcr-sep    { border: none; border-top: 1px dashed rgba(255,255,255,.18); margin: 8px 0; }
+        .bcr-tag    { display: inline-block; background: #fef08a; color: #7f1d1d; font-size: .67rem; font-weight: 800; text-transform: uppercase; padding: 2px 8px; border-radius: 20px; margin-bottom: 6px; }
+        .bcr-hosp   { font-size: 1.03rem; font-weight: 800; }
+        .bcr-meta   { display: flex; gap: 12px; margin-top: 5px; flex-wrap: wrap; }
+        .bcr-m      { font-size: .83rem; color: #fde68a; display: flex; align-items: center; gap: 4px; }
+        .bcr-m.spin { color: #94a3b8; font-style: italic; }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar d-flex flex-column justify-content-between text-white">
+        <div>
+            <div class="d-flex align-items-center gap-3 py-3 border-bottom border-secondary mb-4">
+                <img src="images/camion.png" alt="Avatar" class="rounded-circle" style="width: 50px; height: 50px; object-fit: cover; border: 2px solid #334155;">
+                <div>
+                    <h4 class="m-0 text-white fw-bold" style="letter-spacing: -0.5px;">Cold Chain</h4>
+                    <small class="text-muted fw-semibold">Cadena</small>
+                </div>
+            </div>
+
+            <nav id="nav" class="nav flex-column w-100">
+                <a href="index.html" class="nav-link-custom">
+                    <i class="bi bi-speedometer2 fs-5"></i> Inicio
+                </a>
+                <a href="mapa.html" class="nav-link-custom active">
+                    <i class="bi bi-geo-alt fs-5"></i> Monitoreo de Ruta
+                </a>
+                <a href="ia.html" class="nav-link-custom">
+                    <i class="bi bi-cpu fs-5"></i> Alerta de anomalías
+                </a>
+                <div class="restringido-operator w-100">
+                    <a href="/catalogo.html" class="nav-link-custom">
+                        <i class="bi bi-folder2-open fs-5"></i> Catálogo
+                    </a>
+                </div>
+                <div class="restringido-operator w-100">
+                    <a href="reportes.html" class="nav-link-custom">
+                        <i class="bi bi-file-earmark-bar-graph fs-5"></i> Auditoría y Reportes
+                    </a>
+                </div>
+            </nav>
+        </div>
+        <div class="pt-3 border-top border-secondary mt-4">
+            <span class="d-block text-muted fw-bold" style="font-size: 0.8rem; letter-spacing: 0.5px;">TACTICAL SOLUTIONS</span>
+        </div>
+    </div>
+
+    <div class="main">
+        <header>
+            <h1>Monitoreo de Ruta (En Vivo)</h1>
+        </header>
+
+        <div class="cards">
+            <div class="card">
+                <h3><i class="fas fa-truck-moving"></i> Camiones Activos</h3>
+                <p id="totalCamiones">0</p>
+            </div>
+            <div class="card">
+                <h3><i class="fas fa-thermometer-half"></i> Temperatura Promedio</h3>
+                <p id="tempPromedio">0°C</p>
+            </div>
+            <div class="card">
+                <h3><i class="fas fa-exclamation-triangle"></i> Alertas</h3>
+                <p id="totalAlertas">0</p>
+            </div>
+            <div class="card">
+                <h3><i class="fas fa-road"></i> Km Hoy</h3>
+                <p id="kmHoy">0 km</p>
+            </div>
+        </div>
+
+        <div class="rango-temp-box">
+            <h3><i class="fas fa-temperature-half"></i> Rango de Temperatura Recomendada</h3>
+            <div class="rango-valor">
+                <span class="min">18°C</span>&nbsp;–&nbsp;<span class="max">28°C</span>
+            </div>
+        </div>
+
+        <div class="dashboard">
+            <div class="mapa">
+                <h2>Mapa en Tiempo Real</h2>
+
+                <div class="barra-estado-ia">
+                    <span class="badge-estado" id="badgeUbicacionFuente">📍 Ubicación: esperando datos...</span>
+                    <span class="badge-estado" id="badgeRiesgoIA">🧠 IA: sin análisis aún</span>
+                    <button type="button" class="btn-probar-ia" onclick="probarModalPrediccionIA()">
+                        Probar predicción IA
+                    </button>
+                    <button type="button" class="btn-probar-ia" style="background:#7c3aed" onclick="probarAlertaRuta()">
+                        Probar alerta ruta
+                    </button>
+                </div>
+
+                <div id="map"></div>
+
+                <div class="panel-ruta-activa" id="panelRutaActiva">
+                    <span class="pra-label" id="praLabel">📋 Ruta asignada — CAM-05</span>
+                    <div class="pra-paso">
+                        <span id="praOrigenIco" class="ico-origen"><i class="fas fa-circle-dot"></i></span>
+                        <span class="pra-nombre" id="praOrigen">Luin Farmacéutica Ecatepec</span>
+                    </div>
+                    <span class="pra-flecha"><i class="fas fa-arrow-right"></i></span>
+                    <div class="pra-paso">
+                        <span id="praDestinoIco" class="ico-destino"><i class="fas fa-location-dot"></i></span>
+                        <span class="pra-nombre" id="praDestino">IMSS HGR 196 – Ecatepec</span>
+                    </div>
+                    <div class="pra-meta">
+                        <span><i class="fas fa-route"></i> <span id="praDist">calculando…</span></span>
+                        <span><i class="fas fa-clock"></i> <span id="praTiempo">—</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grafica">
+                <h2>Temperatura por Camión</h2>
+                <div class="grafica-container">
+                    <canvas id="graficaTemp"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="tabla">
+            <h2>Estado de los Camiones</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Estado</th>
+                        <th>Ruta</th>
+                        <th>Velocidad</th>
+                        <th>Temperatura</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaCamiones">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- POP-UP AUTOMÁTICO DEL CONDUCTOR -->
+    <div id="popupAlertaConductor" class="alerta-conductor-popup">
+        <div class="alerta-conductor-header">
+            <h3><i class="fas fa-triangle-exclamation"></i> Alerta de temperatura</h3>
+            <button class="cerrar-alerta" onclick="cerrarPopupAlerta()">×</button>
+        </div>
+        <p id="alertaCamionId">Camión: ---</p>
+        <div id="alertaTemperatura" class="temperatura-alerta">-- °C</div>
+        <p id="alertaMensaje">La temperatura del cargamento está fuera del rango seguro.</p>
+        <p><strong>Acción recomendada:</strong> revisar sistema de enfriamiento y reportar al centro de monitoreo.</p>
+
+        <div class="bloque-cambio-ruta" id="bloqueRutaCambio" style="display:none">
+            <div class="bcr-titulo">🚨 Cambio de ruta por emergencia médica</div>
+            <div class="bcr-linea"><span class="bcr-ico">🟢</span><div><span class="bcr-etq">Origen del envío</span><span class="bcr-val" id="bcrOrigen">—</span></div></div>
+            <div class="bcr-linea"><span class="bcr-ico">🔵</span><div><span class="bcr-etq">Destino original</span><span class="bcr-val" id="bcrDestinoOrig">—</span></div></div>
+            <hr class="bcr-sep">
+            <span class="bcr-tag">⚡ Nueva ruta optimizada por calles</span>
+            <div class="bcr-linea">
+                <span class="bcr-ico">🔴</span>
+                <div>
+                    <span class="bcr-etq">Dirígete de inmediato a</span>
+                    <div class="bcr-hosp" id="bcrHospNombre">Buscando…</div>
+                    <div class="bcr-meta" id="bcrHospMeta"><span class="bcr-m spin"><i class="fas fa-spinner fa-spin"></i> calculando ruta…</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="avisoSonido" class="aviso-sonido">
+            <i class="fas fa-volume-high"></i>
+            Por seguridad del navegador, toca o haz clic una vez en la pantalla para habilitar el sonido.
+        </div>
+    </div>
+
+    <!-- MODAL PREDICCIÓN IA -->
+    <div id="modalPrediccionIA" class="modal-ia-overlay">
+        <div class="modal-ia-card">
+            <div class="modal-ia-header">
+                <h3><i class="fas fa-brain"></i> Predicción de IA - Cadena de Frío</h3>
+                <button class="cerrar-modal-ia" onclick="cerrarModalPrediccionIA()">×</button>
+            </div>
+            <div class="modal-ia-badge-fuente" id="modalIAFuenteUbicacion">📍 Obteniendo ubicación...</div>
+            <div class="modal-ia-console" id="modalIAConsola"><div>Esperando análisis de la IA...</div></div>
+            <div class="modal-ia-hospital">
+                <h4><i class="fas fa-hospital"></i> Hospital más cercano</h4>
+                <div id="modalIAHospitalInfo">Aún no se ha buscado ningún hospital.</div>
+            </div>
+            <div id="modalIAMapaHospital" class="modal-ia-mapa"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- SCRIPT LÓGICO Y MAPA -->
+    <script>
+        const LIMITE_TEMP_MIN = 18; 
+        const LIMITE_TEMP_MAX = 28;
+        const INTERVALO_MOVIMIENTO_MS = 1800;
+        const PASO_COORDENADAS = 2;
+
+        const camiones = [
+            { id: "CAM-01", nombreUnidad: "Unidad Refrigerada 01", estado: "En movimiento", activo: true, ubicacionActual: { lat: 19.4038, lng: -98.9857 }, velocidadKmh: 65, temperaturaActualC: 22.5, alertaActiva: false, kmRecorridosHoy: 65 },
+            { id: "CAM-02", nombreUnidad: "Unidad Refrigerada 02", estado: "En movimiento", activo: true, ubicacionActual: { lat: 19.3740, lng: -99.0903 }, velocidadKmh: 55, temperaturaActualC: 20.2, alertaActiva: false, kmRecorridosHoy: 57 },
+            { id: "CAM-03", nombreUnidad: "Unidad Refrigerada 03", estado: "En movimiento", activo: true, ubicacionActual: { lat: 19.4358, lng: -98.9446 }, velocidadKmh: 40, temperaturaActualC: 24.1, alertaActiva: false, kmRecorridosHoy: 43 },
+            { id: "CAM-04", nombreUnidad: "Unidad Refrigerada 04", estado: "Estacionado", activo: true, ubicacionActual: { lat: 19.3570, lng: -98.9918 }, velocidadKmh: 0, temperaturaActualC: 21.8, alertaActiva: false, kmRecorridosHoy: 28 },
+            { id: "CAM-05", nombreUnidad: "Unidad Refrigerada 05 (Real)", estado: "Esperando conexión...", activo: true, ubicacionActual: { lat: 19.6152, lng: -99.0053 }, velocidadKmh: 0, temperaturaActualC: 0, alertaActiva: false, kmRecorridosHoy: 0 }
+        ];
+
+        let map, graficaTemperatura;
+        const markersCamiones = {};
+        let estelaRutaCAM05 = null;
+        let coordenadasEstelaCAM05 = [];
+        let audioContext = null;
+        let sonidoHabilitado = false;
+        const alertasVisualesMostradas = new Set();
+        const alertasSonorasReproducidas = new Set();
+        const notificacionesMostradas = new Set();
+
+        // Bandera maestra para el botón del problema
+        window.iaSilenciada = false;
+
+        let gpsReal = false;
+        let ubicacionNavegadorCache = null;
+
+        const OSRM_BASE = "https://router.project-osrm.org/route/v1/driving";
+        const RUTAS_CAMIONES = {
+            "CAM-01": { origenNombre: "UTN Nezahualcóyotl", origenLat: 19.4038, origenLng: -98.9857, destinoNombre: "Hospital Vivo Jardín Bicentenario", destinoLat: 19.4308, destinoLng: -99.0242 },
+            "CAM-02": { origenNombre: "Central de Abasto CDMX", origenLat: 19.3740, origenLng: -99.0903, destinoNombre: "H.G. Dr. Gustavo Baz Prada – Neza", destinoLat: 19.4221, destinoLng: -99.0149 },
+            "CAM-03": { origenNombre: "Deportivo Herreros – Chimalhuacán", origenLat: 19.4358, origenLng: -98.9446, destinoNombre: "Centro Médico Hospitalario Chimalhuacán", destinoLat: 19.4167, destinoLng: -98.9425 },
+            "CAM-04": { origenNombre: "Bodega Aurrerá – Los Reyes La Paz", origenLat: 19.3570, origenLng: -98.9918, destinoNombre: "IMSS HGZ 53 – Los Reyes Acaquilpan", destinoLat: 19.3568, destinoLng: -98.9910 },
+            "CAM-05": { origenNombre: "Luin Farmacéutica Ecatepec", origenLat: 19.6152, origenLng: -99.0053, destinoNombre: "IMSS HGR 196 – Ecatepec", destinoLat: 19.5290, destinoLng: -99.0311 }
+        };
+        const COLORES_CAMION = { "CAM-01": "#3b82f6", "CAM-02": "#22c55e", "CAM-03": "#f59e0b", "CAM-04": "#a855f7", "CAM-05": "#94a3b8" };
+        const rutaAsignadaPolylines = {}; const rutaEmergPolylines = {}; const marcadoresDestino = {}; const marcadoresHospEmerg = {}; const camionesEnEmerg = new Set();
+
+        function inicializarMapa() {
+            map = L.map("map").setView([19.44, -99.01], 11);
+            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "&copy; OpenStreetMap" }).addTo(map);
+            estelaRutaCAM05 = L.polyline(coordenadasEstelaCAM05, { color: "#22c55e", weight: 5, opacity: 0.95, lineCap: "round", lineJoin: "round" }).addTo(map);
+            inicializarRutasAsignadas();
+        }
+
+        function camionTieneAlerta(camion) { 
+            const temp = Number(camion.temperaturaActualC);
+            if (camion.id === "CAM-05" && temp === 0) return false;
+            return camion.alertaActiva === true || temp < LIMITE_TEMP_MIN || temp > LIMITE_TEMP_MAX; 
+        }
+
+        function crearIconoCamion(tieneAlerta) {
+            const claseAlerta = tieneAlerta ? "alerta" : "";
+            return L.divIcon({ html: `<div class="truck-marker-wrapper ${claseAlerta}"><i class="fas fa-truck"></i></div>`, className: "custom-truck-icon", iconSize: [38, 38], iconAnchor: [19, 19], popupAnchor: [0, -16] });
+        }
+
+        function cargarCamionesEnMapa() { camiones.forEach(c => actualizarMarcadorCamion(c)); }
+
+        function actualizarMarcadorCamion(camion) {
+            const pos = [camion.ubicacionActual.lat, camion.ubicacionActual.lng];
+            const tieneAlerta = camionTieneAlerta(camion);
+            const icono = crearIconoCamion(tieneAlerta);
+            const popup = `<strong style="color: #2196f3; font-size: 1.1em;">${camion.id}</strong><br><b style="color: #94a3b8;">Unidad:</b> ${camion.nombreUnidad}<br><b style="color: #94a3b8;">Estado:</b> ${camion.estado}<br><b style="color: #94a3b8;">Velocidad:</b> ${camion.velocidadKmh} km/h<br><b style="color: #94a3b8;">Temp:</b> ${camion.temperaturaActualC} °C`;
+            
+            if (markersCamiones[camion.id]) { markersCamiones[camion.id].setLatLng(pos); markersCamiones[camion.id].setIcon(icono); markersCamiones[camion.id].bindPopup(popup); }
+            else { markersCamiones[camion.id] = L.marker(pos, { icon: icono }).addTo(map).bindPopup(popup); }
+        }
+
+        function agregarPuntoAEstelaCAM05(lectura) {
+            if (!estelaRutaCAM05) return;
+            coordenadasEstelaCAM05.push([lectura.lat, lectura.lng]);
+            estelaRutaCAM05.setLatLngs(coordenadasEstelaCAM05);
+            const hayAlerta = lectura.temperaturaC < LIMITE_TEMP_MIN || lectura.temperaturaC > LIMITE_TEMP_MAX;
+            estelaRutaCAM05.setStyle({ color: hayAlerta ? "#ef4444" : "#22c55e", weight: 6 });
+        }
+
+        function cargarTablaCamiones() {
+            const t = document.getElementById("tablaCamiones"); t.innerHTML = "";
+            camiones.forEach(c => {
+                const alerta = camionTieneAlerta(c);
+                const rutaCam = RUTAS_CAMIONES[c.id];
+                const enEmerg = camionesEnEmerg.has(c.id);
+                const rutaHTML = rutaCam ? (enEmerg ? rutaCam.origenNombre + ' → <span style="color:#f87171">🚨 Hospital emergencia</span>' : rutaCam.origenNombre + ' → ' + rutaCam.destinoNombre) : '—';
+                t.innerHTML += `<tr><td>${c.id}</td><td class="${alerta ? 'estado-alerta-tabla' : ''}">${c.estado}</td><td style="font-size:.81rem;text-align:left;max-width:220px">${rutaHTML}</td><td>${c.velocidadKmh} km/h</td><td>${c.temperaturaActualC} °C</td></tr>`;
+            });
+        }
+
+        function actualizarMetricas() {
+            const camionesValidos = camiones.filter(c => c.temperaturaActualC > 0);
+            const prom = camionesValidos.length > 0 
+                ? camionesValidos.reduce((acc, c) => acc + Number(c.temperaturaActualC), 0) / camionesValidos.length 
+                : 0;
+
+            document.getElementById("totalCamiones").textContent = camiones.length;
+            document.getElementById("totalAlertas").textContent = camiones.filter(c => camionTieneAlerta(c)).length;
+            document.getElementById("tempPromedio").textContent = `${prom.toFixed(1)}°C`;
+            document.getElementById("kmHoy").textContent = `${camiones.reduce((acc, c) => acc + Number(c.kmRecorridosHoy || 0), 0).toFixed(1)} km`;
+        }
+
+        function inicializarGraficaTemperatura() {
+            graficaTemperatura = new Chart(document.getElementById("graficaTemp"), {
+                type: "bar", data: { labels: camiones.map(c => c.id), datasets: [{ label: "Temp °C", data: camiones.map(c => c.temperaturaActualC), backgroundColor: "#2196f3", borderRadius: 8 }] },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { suggestedMax: 35 } } }
+            });
+        }
+
+        function actualizarGraficaCamiones() {
+            if (!graficaTemperatura) return;
+            graficaTemperatura.data.datasets[0].data = camiones.map(c => c.temperaturaActualC);
+            graficaTemperatura.data.datasets[0].backgroundColor = camiones.map(c => camionTieneAlerta(c) ? "#ef4444" : "#2196f3");
+            graficaTemperatura.update();
+        }
+
+        function revisarAlertaCamion(camion, lectura) {
+            if (!camionTieneAlerta(camion)) return;
+            const claveAlerta = `${camion.id}-${Math.floor(camion.temperaturaActualC * 10)}`;
+            if (!alertasVisualesMostradas.has(claveAlerta)) { alertasVisualesMostradas.add(claveAlerta); mostrarPopupAlerta(camion, lectura); if("vibrate" in navigator) navigator.vibrate([400,200,400,200,600]); }
+            if (sonidoHabilitado && !alertasSonorasReproducidas.has(claveAlerta)) { alertasSonorasReproducidas.add(claveAlerta); sonidoAlarma(); }
+        }
+
+        function mostrarPopupAlerta(camion, lectura) {
+            const p = document.getElementById("popupAlertaConductor");
+            document.getElementById("alertaCamionId").textContent = `Camión: ${camion.id}`;
+            document.getElementById("alertaTemperatura").textContent = `${camion.temperaturaActualC} °C`;
+            document.getElementById("alertaMensaje").textContent = `La temperatura de ${camion.id} está fuera del rango seguro (18°C - 28°C).`;
+            p.classList.add("show"); setTimeout(() => p.classList.remove("show"), 12000);
+            if (typeof activarRutaEmergencia === "function") activarRutaEmergencia(camion, lectura);
+        }
+
+        window.cerrarPopupAlerta = function() { document.getElementById("popupAlertaConductor").classList.remove("show"); }
+
+        function prepararFuncionesDeNotificacionSinBoton() {
+            const activarFunciones = async () => {
+                if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioContext.state === "suspended") await audioContext.resume();
+                sonidoHabilitado = true;
+                const aviso = document.getElementById("avisoSonido"); if (aviso) aviso.style.display = "none";
+                reproducirBeep(600, 120, 0); reproducirBeep(800, 120, 160);
+                document.removeEventListener("click", activarFunciones); document.removeEventListener("touchstart", activarFunciones);
+            };
+            document.addEventListener("click", activarFunciones); document.addEventListener("touchstart", activarFunciones);
+        }
+
+        function sonidoAlarma() { reproducirBeep(900, 250, 0); reproducirBeep(700, 250, 300); reproducirBeep(900, 250, 600); }
+        function reproducirBeep(f, d, r) { if (!audioContext || !sonidoHabilitado) return; setTimeout(() => { const o = audioContext.createOscillator(), g = audioContext.createGain(); o.type = "square"; o.frequency.value = f; g.gain.setValueAtTime(0.25, audioContext.currentTime); g.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + d/1000); o.connect(g); g.connect(audioContext.destination); o.start(); o.stop(audioContext.currentTime + d/1000); }, r); }
+
+        async function calcularRutaOSRM(puntos) {
+            try { const waypoints = puntos.map(p => `${p.lng},${p.lat}`).join(";"); const resp = await fetch(`${OSRM_BASE}/${waypoints}?overview=full&geometries=geojson`); const data = await resp.json(); if (!data.routes || !data.routes.length) return null; const r = data.routes[0]; return { distKm: (r.distance/1000).toFixed(1), minutos: Math.ceil(r.duration/60), coords: r.geometry.coordinates.map(([lo, la]) => [la, lo]) }; } catch (e) { return null; }
+        }
+
+        function actualizarPanelRuta({ camionId, origenNombre, destinoNombre, distKm, minutos, emergencia }) {
+            const p = document.getElementById("panelRutaActiva"), l = document.getElementById("praLabel"); if(!p) return;
+            p.classList.toggle("emergencia", !!emergencia); l.classList.toggle("emergencia", !!emergencia);
+            if (emergencia) { l.textContent = "🚨 Ruta de emergencia — " + camionId; document.getElementById("praOrigenIco").className="ico-emerg"; document.getElementById("praOrigenIco").innerHTML='<i class="fas fa-truck"></i>'; document.getElementById("praDestinoIco").className="ico-emerg"; document.getElementById("praDestinoIco").innerHTML='<i class="fas fa-hospital"></i>'; }
+            else { l.textContent = "📋 Ruta asignada — " + camionId; document.getElementById("praOrigenIco").className="ico-origen"; document.getElementById("praOrigenIco").innerHTML='<i class="fas fa-circle-dot"></i>'; document.getElementById("praDestinoIco").className="ico-destino"; document.getElementById("praDestinoIco").innerHTML='<i class="fas fa-location-dot"></i>'; }
+            document.getElementById("praOrigen").textContent = origenNombre || "—"; document.getElementById("praDestino").textContent = destinoNombre || "—"; document.getElementById("praDist").textContent = distKm ? distKm + " km" : "calculando…";
+            if(minutos) { const h = Math.floor(minutos/60), m = minutos%60; document.getElementById("praTiempo").textContent = h>0 ? `${h}h ${m}min` : `${m} min`; document.getElementById("praTiempo").parentElement.className = emergencia ? "urgente" : ""; } else { document.getElementById("praTiempo").textContent = "—"; }
+        }
+
+        async function inicializarRutasAsignadas() {
+            for (const [camId, ruta] of Object.entries(RUTAS_CAMIONES)) {
+                const color = COLORES_CAMION[camId] || "#3b82f6";
+                const res = await calcularRutaOSRM([{ lat: ruta.origenLat, lng: ruta.origenLng }, { lat: ruta.destinoLat, lng: ruta.destinoLng }]);
+                const coords = res ? res.coords : [[ruta.origenLat, ruta.origenLng], [ruta.destinoLat, ruta.destinoLng]];
+                rutaAsignadaPolylines[camId] = L.polyline(coords, { color: color, weight: 3, opacity: 0.55, dashArray: "10 6" }).addTo(map);
+                marcadoresDestino[camId] = L.marker([ruta.destinoLat, ruta.destinoLng], { icon: L.divIcon({ html: `<div style="background:${color};color:white;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid white;font-size:12px;box-shadow:0 2px 5px rgba(0,0,0,.5)"><i class="fas fa-location-dot"></i></div>`, className: "", iconSize: [28,28], iconAnchor:[14,14] }) }).addTo(map).bindPopup(`<strong style="color:${color}">Destino — ${camId}</strong><br>${ruta.destinoNombre}`);
+                if (camId === "CAM-05") actualizarPanelRuta({ camionId: "CAM-05", origenNombre: ruta.origenNombre, destinoNombre: ruta.destinoNombre, distKm: res ? res.distKm : null, minutos: res ? res.minutos : null });
+            }
+        }
+
+        const _sim = {};
+        function _haversineKm(la1,lo1,la2,lo2) { const R=6371; const dl=(la2-la1)*Math.PI/180; const dg=(lo2-lo1)*Math.PI/180; const a=Math.sin(dl/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dg/2)**2; return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)); }
+        
+        async function iniciarSimulacionCamion(camId) {
+            const ruta = RUTAS_CAMIONES[camId]; if (!ruta) return;
+            const res = await calcularRutaOSRM([{ lat: ruta.origenLat, lng: ruta.origenLng }, { lat: ruta.destinoLat, lng: ruta.destinoLng }]);
+            const coords = res ? res.coords.map(([la,lo])=>({lat:la,lng:lo})) : [{lat:ruta.origenLat,lng:ruta.origenLng},{lat:ruta.destinoLat,lng:ruta.destinoLng}];
+            _sim[camId] = { coords, idx: 0, intervalo: null };
+            
+            const mover = () => {
+                const s = _sim[camId]; if (!s || s.idx >= s.coords.length) { clearInterval(s.intervalo); return; }
+                const { lat, lng } = s.coords[s.idx]; const camion = camiones.find(c => c.id === camId); if (!camion) return;
+                const pct = s.idx / s.coords.length; 
+                
+                let temp = 22.0; 
+                if(pct>0.4 && pct<=0.65) temp=25.5; 
+                else if(pct>0.65 && pct<=0.85) temp=27.8; 
+                else if(pct>0.85) temp=29.5; 
+                
+                const alerta = temp < LIMITE_TEMP_MIN || temp > LIMITE_TEMP_MAX; 
+                
+                camion.ubicacionActual = {lat,lng}; camion.velocidadKmh = alerta?25:45; camion.temperaturaActualC = temp; camion.alertaActiva = alerta; camion.estado = alerta?"Alerta - Temp. elevada":"En ruta"; camion.kmRecorridosHoy = Math.round(pct*_haversineKm(ruta.origenLat,ruta.origenLng,ruta.destinoLat,ruta.destinoLng)*10)/10;
+                if(!s.estela) { s.estelaCoords=[]; s.estela=L.polyline([],{color:COLORES_CAMION[camId],weight:4,opacity:0.85}).addTo(map); }
+                s.estelaCoords.push([lat,lng]); s.estela.setLatLngs(s.estelaCoords); if(alerta) s.estela.setStyle({color:"#ef4444",weight:5});
+                actualizarMarcadorCamion(camion); cargarTablaCamiones(); actualizarMetricas(); actualizarGraficaCamiones();
+                if(alerta) revisarAlertaCamion(camion, {hora:"-"});
+                s.idx += PASO_COORDENADAS;
+            };
+            _sim[camId].intervalo = setInterval(mover, INTERVALO_MOVIMIENTO_MS); mover();
+        }
+
+        const PUNTOS_APOYO_LOCALES = [ { nombre:"Hospital Vivo Jardín Bicentenario (Star Médica) 24h", lat:19.4308, lng:-99.0242 }, { nombre:"H.G. Dr. Gustavo Baz Prada – Neza 24h", lat:19.4221, lng:-99.0149 }, { nombre:"IMSS HGR 196 – Ecatepec 24h", lat:19.5290, lng:-99.0311 } ];
+        function puntoCercanoLocal(lat, lng) { let mejor=null, md=Infinity; PUNTOS_APOYO_LOCALES.forEach(p=>{ const d=_haversineKm(lat,lng,p.lat,p.lng); if(d<md){ md=d; mejor={...p,distanciaKm:d}; } }); return mejor; }
+        async function buscarHospitalCercano(lat, lng) { return Promise.resolve(puntoCercanoLocal(lat, lng)); }
+
+        async function activarRutaEmergencia(camion, lectura) {
+            const camId = camion.id; if (camionesEnEmerg.has(camId)) return; camionesEnEmerg.add(camId);
+            const lat = camion.ubicacionActual.lat; const lng = camion.ubicacionActual.lng;
+            
+            const b = document.getElementById("bloqueRutaCambio"); if(b) b.style.display="block";
+            actualizarPanelRuta({ camionId: camId, origenNombre: "Posición actual", destinoNombre: "Buscando hospital…", emergencia: true });
+            if (rutaAsignadaPolylines[camId]) rutaAsignadaPolylines[camId].setStyle({ opacity: 0.12 });
+            
+            const hosp = await buscarHospitalCercano(lat, lng); if(!hosp) return;
+            const res = await calcularRutaOSRM([{ lat, lng }, { lat: hosp.lat, lng: hosp.lng }]);
+            const coords = res ? res.coords : [[lat, lng], [hosp.lat, hosp.lng]];
+            
+            L.polyline(coords, { color: "#ef4444", weight: 6, opacity: 0.95 }).addTo(map);
+            L.marker([hosp.lat, hosp.lng], { icon: L.divIcon({ html: '<div style="background:#ef4444;color:white;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid white;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.6);animation:pulsoAlerta 1s infinite"><i class="fas fa-hospital"></i></div>', className: "", iconSize: [36, 36], iconAnchor: [18, 18] }) }).addTo(map).bindPopup('<strong style="color:#f87171">🚨 Hospital emergencia</strong><br>'+hosp.nombre).openPopup();
+            actualizarPanelRuta({ camionId: camId, origenNombre: "Posición actual", destinoNombre: hosp.nombre, distKm: res?res.distKm:null, minutos: res?res.minutos:null, emergencia: true });
+            
+            if(b) { document.getElementById("bcrHospNombre").textContent = hosp.nombre; document.getElementById("bcrHospMeta").innerHTML = `<span class="bcr-m"><i class="fas fa-route"></i> ${res?res.distKm:hosp.distanciaKm.toFixed(1)} km</span>`; }
+        }
+
+        window.probarAlertaRuta = function() { const c = camiones.find(x => x.id === "CAM-05"); if(c) activarRutaEmergencia(c, {}); };
+
+        inicializarMapa();
+        cargarCamionesEnMapa();
+        cargarTablaCamiones();
+        actualizarMetricas();
+        inicializarGraficaTemperatura();
+        prepararFuncionesDeNotificacionSinBoton();
+        
+        ["CAM-01", "CAM-02", "CAM-03", "CAM-04"].forEach(id => iniciarSimulacionCamion(id));
+
+        // ============================================================
+        // FUNCIONES DEL MODAL DE IA ACTUALIZADAS PARA SOLUCIONAR EL BOTÓN
+        // ============================================================
+        
+        // Al cerrar, le decimos a la memoria que la mantenga silenciada
+        function cerrarModalPrediccionIA() {
+            document.getElementById("modalPrediccionIA").classList.remove("show");
+            window.iaSilenciada = true; // Bloquea reaperturas automáticas
+        }
+        window.cerrarModalPrediccionIA = cerrarModalPrediccionIA;
+
+        function probarModalPrediccionIA() {
+            window.iaSilenciada = false; // El botón manual permite abrirla
+            abrirModalPrediccionIA(
+                {
+                    nivelRiesgo: "alerta",
+                    probabilidadFallaPct: 82,
+                    prediccion: "La temperatura seguirá bajando fuera de rango en los próximos minutos si no se corrige.",
+                    mensaje: "Se detectó una caída sostenida de temperatura por debajo del límite seguro.",
+                    accionRecomendada: "Detente en un lugar seguro y revisa el sistema de refrigeración.",
+                    temperaturaAnalizadaC: 1.8
+                },
+                "CAM-05 (prueba)"
+            );
+        }
+        window.probarModalPrediccionIA = probarModalPrediccionIA;
+
+        function dibujarRutaModalIA(origen, hospital) {
+            if (!modalIALeafletMap) {
+                modalIALeafletMap = L.map("modalIAMapaHospital");
+                L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "&copy; OpenStreetMap" }).addTo(modalIALeafletMap);
+            }
+            setTimeout(() => modalIALeafletMap.invalidateSize(), 200);
+
+            if (modalIARoutingControl) { modalIALeafletMap.removeControl(modalIARoutingControl); modalIARoutingControl = null; }
+
+            modalIARoutingControl = L.Routing.control({
+                waypoints: [ L.latLng(origen.lat, origen.lng), L.latLng(hospital.lat, hospital.lng) ],
+                routeWhileDragging: false, addWaypoints: false, draggableWaypoints: false, fitSelectedRoutes: true, show: false,
+                createMarker: function (indice, waypoint) {
+                    const esOrigen = indice === 0;
+                    return L.marker(waypoint.latLng, { icon: L.divIcon({ html: esOrigen ? '<div class="mini-marker mini-marker-camion"><i class="fas fa-truck"></i></div>' : '<div class="mini-marker mini-marker-hospital"><i class="fas fa-hospital"></i></div>', className: "", iconSize: [32, 32], iconAnchor: [16, 16] }) });
+                },
+                lineOptions: { styles: [{ color: "#3b82f6", weight: 5, opacity: 0.9 }] }
+            }).addTo(modalIALeafletMap);
+        }
+
+        async function abrirModalPrediccionIA(analisis, camionId) {
+            if (window.iaSilenciada) return; // Bloquea si ya la cerraste
+
+            const overlay = document.getElementById("modalPrediccionIA");
+            overlay.classList.add("show");
+
+            document.getElementById("modalIAConsola").innerHTML = `
+                <div><span class="consola-etiqueta">Camión:</span> ${camionId}</div>
+                <div><span class="consola-etiqueta">Nivel de riesgo:</span> <b class="riesgo-${analisis.nivelRiesgo}">${analisis.nivelRiesgo.toUpperCase()}</b></div>
+                <div><span class="consola-etiqueta">Probabilidad de falla:</span> ${analisis.probabilidadFallaPct}%</div>
+                <div><span class="consola-etiqueta">Temperatura analizada:</span> ${analisis.temperaturaAnalizadaC ?? "--"} °C</div>
+                <div><span class="consola-etiqueta">Predicción:</span> ${analisis.prediccion}</div>
+                <div><span class="consola-etiqueta">Mensaje:</span> ${analisis.mensaje}</div>
+                <div><span class="consola-etiqueta">Acción recomendada:</span> ${analisis.accionRecomendada}</div>
+            `;
+
+            const badgeModal = document.getElementById("modalIAFuenteUbicacion");
+            badgeModal.textContent = "📍 Obteniendo ubicación...";
+            document.getElementById("modalIAHospitalInfo").textContent = "Buscando hospital más cercano...";
+
+            const ubicacion = await new Promise((resolve) => {
+                if (gpsReal) resolve({ lat: camiones[4].ubicacionActual.lat, lng: camiones[4].ubicacionActual.lng, fuente: "gps" });
+                else if (!("geolocation" in navigator)) resolve(ubicacionNavegadorCache);
+                else navigator.geolocation.getCurrentPosition(
+                    (p) => { ubicacionNavegadorCache = { lat: p.coords.latitude, lng: p.coords.longitude, fuente: "simulada" }; resolve(ubicacionNavegadorCache); },
+                    () => resolve(ubicacionNavegadorCache), { enableHighAccuracy: true, timeout: 8000 }
+                );
+            });
+
+            if (!ubicacion) {
+                badgeModal.textContent = "⚠️ No se pudo obtener ubicación";
+                document.getElementById("modalIAHospitalInfo").textContent = "No se puede buscar hospital sin ubicación.";
+                return;
+            }
+
+            badgeModal.textContent = `${ubicacion.fuente === "gps" ? "📍 Ubicación real" : "💻 Ubicación simulada"} (${ubicacion.lat.toFixed(5)}, ${ubicacion.lng.toFixed(5)})`;
+            const hospital = await buscarHospitalCercano(ubicacion.lat, ubicacion.lng);
+
+            if (!hospital) {
+                document.getElementById("modalIAHospitalInfo").textContent = "No se encontró ningún hospital cercano.";
+                return;
+            }
+
+            document.getElementById("modalIAHospitalInfo").innerHTML = `<strong>${hospital.nombre}</strong><br>Distancia aproximada: ${hospital.distanciaKm.toFixed(2)} km`;
+            dibujarRutaModalIA(ubicacion, hospital);
+        }
+
+        const analisisIAMostrados = new Set();
+
+        function evaluarYAbrirModalIA(datosNube) {
+            if (window.iaSilenciada) return; // Si ya lo cerró el usuario, no evalúa abrirlo de nuevo
+
+            const analisis = datosNube.analisisIA;
+            const badgeIA = document.getElementById("badgeRiesgoIA");
+            
+            if (badgeIA) {
+                if (analisis) {
+                    badgeIA.textContent = `🧠 IA: ${analisis.nivelRiesgo.toUpperCase()} (${analisis.probabilidadFallaPct}%)`;
+                    badgeIA.className = `badge-estado riesgo-${analisis.nivelRiesgo}`;
+                } else {
+                    badgeIA.textContent = "🧠 IA: sin análisis aún";
+                    badgeIA.className = "badge-estado";
+                }
+            }
+
+            const camionReal = camiones.find(c => c.id === "CAM-05");
+
+            if (analisis && (analisis.nivelRiesgo === "alerta" || analisis.nivelRiesgo === "critico")) {
+                const clave = `ia-CAM-05-${analisis.generadoEn}`;
+                if (!analisisIAMostrados.has(clave)) {
+                    analisisIAMostrados.add(clave);
+                    abrirModalPrediccionIA(analisis, "CAM-05");
+                }
+                return;
+            }
+
+            // Respaldo de alerta simple si la IA no mandó nada
+            if (!analisis && camionReal && camionReal.alertaActiva) {
+                const clave = `simple-CAM-05-${datosNube.timestamp}`;
+                if (!analisisIAMostrados.has(clave)) {
+                    analisisIAMostrados.add(clave);
+                    abrirModalPrediccionIA({
+                        nivelRiesgo: "alerta",
+                        probabilidadFallaPct: 100,
+                        prediccion: "La temperatura superó el límite seguro configurado.",
+                        mensaje: `La temperatura actual (${camionReal.temperaturaActualC} °C) está fuera de rango.`,
+                        accionRecomendada: "Detente en un lugar seguro y revisa el sistema de refrigeración.",
+                        temperaturaAnalizadaC: camionReal.temperaturaActualC
+                    }, "CAM-05");
+                }
+            }
+        }
+
+        window.procesarDatosRealesCAM05 = function(datosNube) {
+            const camion = camiones.find(c => c.id === "CAM-05");
+            if (!camion) return;
+
+            camion.temperaturaActualC = (datosNube.temperatura !== "Error") ? parseFloat(datosNube.temperatura) : 0;
+            camion.velocidadKmh = datosNube.velocidad_kmh || 0;
+            camion.humedadActualPct = (datosNube.humedad !== "Error") ? parseFloat(datosNube.humedad) : 0;
+
+            camion.alertaActiva = camion.temperaturaActualC > 0 && (camion.temperaturaActualC < LIMITE_TEMP_MIN || camion.temperaturaActualC > LIMITE_TEMP_MAX);
+            
+            gpsReal = datosNube.latitud !== "Buscando..." && datosNube.longitud !== "Buscando...";
+            
+            if (gpsReal) {
+                const lat = parseFloat(datosNube.latitud);
+                const lng = parseFloat(datosNube.longitud);
+                camion.ubicacionActual = { lat, lng };
+                agregarPuntoAEstelaCAM05({ lat, lng, temperaturaC: camion.temperaturaActualC });
+                if (!camionesEnEmerg.has("CAM-05")) map.panTo([lat, lng]);
+            }
+
+            camion.estado = camion.alertaActiva ? "Alerta de Temperatura" : "En Ruta Activa";
+            if (!gpsReal) camion.estado += " (Buscando GPS...)";
+
+            actualizarMarcadorCamion(camion);
+            cargarTablaCamiones();
+            actualizarMetricas();
+            actualizarGraficaCamiones();
+
+            const badgeUbic = document.getElementById("badgeUbicacionFuente");
+            if (badgeUbic) {
+                badgeUbic.textContent = gpsReal ? "📍 Ubicación real (GPS)" : "💻 Ubicación simulada (Esperando GPS...)";
+                badgeUbic.className = "badge-estado " + (gpsReal ? "fuente-gps" : "fuente-simulada");
+            }
+
+            // Aquí es donde se evalúa y se abre el modal si es necesario
+            evaluarYAbrirModalIA(datosNube);
+
+            if (camion.alertaActiva) {
+                revisarAlertaCamion(camion, { hora: "Live", lat: camion.ubicacionActual.lat, lng: camion.ubicacionActual.lng });
+            }
+        };
+
+    </script>
+
+    <!-- ============================================================
+         MÓDULO DE FIREBASE (Limpio de conflictos)
+    ============================================================ -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDBXlO9v0ECZtyDXVCcx4ukLkf-rPxl0HE",
+            authDomain: "cadenafrio.firebaseapp.com",
+            databaseURL: "https://cadenafrio-default-rtdb.firebaseio.com",
+            projectId: "cadenafrio"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const refTelemetria = ref(db, 'monitoreo/camion_01');
+        onValue(refTelemetria, (snapshot) => {
+            const datos = snapshot.val();
+            if (datos && window.procesarDatosRealesCAM05) {
+                window.procesarDatosRealesCAM05(datos);
+            }
+        });
+    </script>
+</body>
+</html>
