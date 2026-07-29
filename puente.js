@@ -33,7 +33,7 @@ const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GE
 
 // Umbral solo como referencia para el prompt (la decisión real la hace la IA,
 // no un simple if/else como antes).
-const TEMP_REFERENCIA_MAX_C = Number(process.env.TEMP_REFERENCIA_MAX_C || 28);
+const TEMP_REFERENCIA_MAX_C = Number(process.env.TEMP_REFERENCIA_MAX_C || 5.5);
 
 // Cuántas lecturas recientes mandamos como contexto a la IA.
 const TAMANO_HISTORIAL = 10;
@@ -173,8 +173,7 @@ async function analizarConGemini(historial) {
 Eres el sistema de IA predictiva de una plataforma de cadena de frío para
 transporte de productos médicos sensibles (vacunas, medicamentos).
 
-Rango de temperatura seguro y recomendado: Entre 18 °C y 28 °C.
-Cualquier temperatura por debajo de 18 °C o por encima de 28 °C representa un riesgo de ruptura de la cadena de frío.
+Temperatura de referencia máxima segura: ${TEMP_REFERENCIA_MAX_C} °C.
 
 Analiza el siguiente historial de lecturas recientes del camión ${CAMION_ID},
 ordenadas de la más antigua a la más reciente (formato JSON):
@@ -182,13 +181,13 @@ ordenadas de la más antigua a la más reciente (formato JSON):
 ${JSON.stringify(historial, null, 2)}
 
 Con base en la TENDENCIA (no solo el último dato), evalúa si el cargamento
-está en riesgo de salir del rango seguro de 18 °C a 28 °C en los próximos minutos.
+está en riesgo de perder la cadena de frío en los próximos minutos.
 Considera: velocidad de cambio de temperatura, humedad, si la puerta se
-abrió, y cuánto tiempo lleva cerca o fuera de dicho rango.
+abrió, y cuánto tiempo lleva cerca o por encima del límite.
 
 Responde SOLO con el JSON pedido, en español, dirigido al conductor y al
 centro de monitoreo. "accionRecomendada" debe ser una instrucción corta y
-concreta (ej: "Detente y revisa el sistema de climatización").
+concreta (ej: "Detente y revisa el sistema de refrigeración").
 `.trim();
 
   const body = {
