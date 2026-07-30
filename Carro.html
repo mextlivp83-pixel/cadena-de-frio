@@ -719,10 +719,17 @@
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         }
 
-        // Radios de búsqueda en metros: intenta el más chico primero y solo
-        // si no encuentra nada, prueba con el siguiente (útil en zonas
-        // rurales o alejadas de hospitales).
-        const RADIOS_BUSQUEDA_HOSPITAL_M = [8000, 15000, 30000, 50000];
+        // UN SOLO radio de búsqueda, amplio (50km). Antes probábamos 4
+        // radios distintos (8/15/30/50km) escalando uno a uno, pero cada
+        // intento fallido implicaba una llamada nueva a /api/hospital (y
+        // esta, internamente, hasta 3 espejos de Overpass con reintentos).
+        // Eso multiplicaba muchísimo el número de peticiones y era la
+        // causa real de los errores 429 (límite de peticiones excedido).
+        // Con un solo radio amplio, la consulta ya trae hasta 15
+        // hospitales de una vez y el código de abajo elige el más
+        // cercano por distancia real (Haversine), así que no perdemos
+        // precisión, solo dejamos de hacer llamadas de más.
+        const RADIOS_BUSQUEDA_HOSPITAL_M = [50000];
 
         // NOTA: ya NO llamamos a Overpass directamente desde el navegador.
         // overpass-api.de, kumi.systems, etc. no siempre mandan el header
