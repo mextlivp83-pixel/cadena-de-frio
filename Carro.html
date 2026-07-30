@@ -99,18 +99,78 @@
         ============================================================ */
         .modal-ia-overlay { display: none; position: fixed; inset: 0; background: rgba(4, 8, 20, 0.72); z-index: 100000; align-items: center; justify-content: center; padding: 20px; }
         .modal-ia-overlay.show { display: flex; }
-        .modal-ia-card { background: linear-gradient(135deg, #7f1d1d, #b91c1c); border: 2px solid #ffffff; border-radius: 18px; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; padding: 22px; box-shadow: 0 0 45px 8px rgba(255, 23, 23, 0.65); animation: entradaAlerta 0.25s ease, brilloAlerta 1s infinite; }
-        .modal-ia-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
-        .modal-ia-header h3 { font-size: 1.15rem; color: #ffffff; }
-        .cerrar-modal-ia { background: rgba(255, 255, 255, 0.1); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; font-size: 18px; cursor: pointer; }
+
+        /* Fondo azul oscuro, igual al resto de las tarjetas del dashboard.
+           El color (borde + resplandor) cambia según el nivel de riesgo
+           que reporte la IA, en vez de ser siempre rojo fijo. */
+        .modal-ia-card {
+            background: #11203d;
+            border: 1px solid #263a63;
+            border-radius: 18px;
+            width: 100%;
+            max-width: 560px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            animation: entradaAlerta 0.25s ease;
+        }
+        .modal-ia-card.riesgo-atencion {
+            border-color: #f59e0b;
+            box-shadow: 0 0 0 2px #f59e0b, 0 0 35px 6px rgba(245, 158, 11, 0.45);
+            animation: entradaAlerta 0.25s ease, brilloModalAmbar 1.6s ease-in-out infinite;
+        }
+        .modal-ia-card.riesgo-alerta,
+        .modal-ia-card.riesgo-critico {
+            border-color: #ef4444;
+            box-shadow: 0 0 0 2px #ef4444, 0 0 45px 8px rgba(239, 68, 68, 0.55);
+            animation: entradaAlerta 0.25s ease, brilloModalAlerta 1.4s ease-in-out infinite;
+        }
+
+        @keyframes brilloModalAlerta {
+            0%, 100% { box-shadow: 0 0 0 2px #ef4444, 0 0 25px 4px rgba(239, 68, 68, 0.45); }
+            50% { box-shadow: 0 0 0 3px #fca5a5, 0 0 55px 12px rgba(239, 68, 68, 0.85); }
+        }
+        @keyframes brilloModalAmbar {
+            0%, 100% { box-shadow: 0 0 0 2px #f59e0b, 0 0 20px 4px rgba(245, 158, 11, 0.4); }
+            50% { box-shadow: 0 0 0 3px #fde68a, 0 0 40px 10px rgba(245, 158, 11, 0.7); }
+        }
+
+        .modal-ia-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 16px; }
+        .modal-ia-header h3 { font-size: 1.15rem; color: #93c5fd; }
+        .cerrar-modal-ia { background: rgba(255, 255, 255, 0.1); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; font-size: 18px; cursor: pointer; flex-shrink: 0; }
         .cerrar-modal-ia:hover { background: rgba(255, 255, 255, 0.2); }
-        .modal-ia-badge-fuente { display: inline-block; background: #1e293b; border: 1px solid #334155; color: #cbd5e1; font-size: 0.85rem; padding: 6px 12px; border-radius: 20px; margin-bottom: 14px; }
-        .modal-ia-console { background: #060c1a; border: 1px solid #1e293b; border-radius: 10px; padding: 14px; font-family: "Consolas", "Courier New", monospace; font-size: 0.85rem; color: #86efac; line-height: 1.6; margin-bottom: 16px; }
-        .modal-ia-console .consola-etiqueta { color: #64748b; }
-        .modal-ia-console .riesgo-alerta, .modal-ia-console .riesgo-critico { color: #f87171; }
-        .modal-ia-console .riesgo-atencion { color: #fbbf24; }
-        .modal-ia-console .riesgo-normal { color: #4ade80; }
-        .modal-ia-hospital h4 { font-size: 0.95rem; color: #ffe4e4; margin-bottom: 8px; }
+
+        .modal-ia-top-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 18px; }
+
+        /* Badge grande y legible con el nivel de riesgo, para verlo de
+           un vistazo sin tener que leer todo el bloque de texto. */
+        .modal-ia-riesgo-pill { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 999px; font-weight: 800; font-size: 0.95rem; letter-spacing: 0.3px; }
+        .modal-ia-riesgo-pill.riesgo-normal { background: rgba(74, 222, 128, 0.15); color: #86efac; border: 1px solid rgba(74, 222, 128, 0.4); }
+        .modal-ia-riesgo-pill.riesgo-atencion { background: rgba(251, 191, 36, 0.15); color: #fde68a; border: 1px solid rgba(251, 191, 36, 0.4); }
+        .modal-ia-riesgo-pill.riesgo-alerta,
+        .modal-ia-riesgo-pill.riesgo-critico { background: rgba(239, 68, 68, 0.15); color: #fecaca; border: 1px solid rgba(239, 68, 68, 0.4); }
+
+        .modal-ia-badge-fuente { display: inline-block; background: #1e293b; border: 1px solid #334155; color: #cbd5e1; font-size: 0.85rem; padding: 6px 12px; border-radius: 20px; }
+
+        /* Datos cortos (camión, probabilidad, temperatura) en tarjetitas
+           dentro de una cuadrícula, en vez de líneas sueltas de texto. */
+        .modal-ia-datos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
+        .modal-ia-dato { background: #0b1730; border: 1px solid #1e293b; border-radius: 10px; padding: 10px 12px; }
+        .modal-ia-dato .etiqueta { display: block; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 4px; }
+        .modal-ia-dato .valor { font-size: 1rem; font-weight: 700; color: #f8fafc; }
+
+        /* Textos largos (predicción, mensaje, acción) como bloques
+           separados y fáciles de leer, no un párrafo de consola. */
+        .modal-ia-texto-bloque { background: #0b1730; border: 1px solid #1e293b; border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; }
+        .modal-ia-texto-bloque .etiqueta { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; margin-bottom: 6px; font-weight: 700; }
+        .modal-ia-texto-bloque .contenido { font-size: 0.9rem; color: #e2e8f0; line-height: 1.55; }
+        .modal-ia-texto-bloque.acento-alerta { border-color: rgba(239, 68, 68, 0.4); }
+        .modal-ia-texto-bloque.acento-alerta .etiqueta { color: #fca5a5; }
+
+        .modal-ia-console { margin-bottom: 16px; }
+
+        .modal-ia-hospital h4 { font-size: 0.95rem; color: #93c5fd; margin-bottom: 8px; }
         .modal-ia-hospital { margin-bottom: 14px; }
         .modal-ia-mapa { width: 100%; height: 260px; border-radius: 12px; overflow: hidden; }
         .mini-marker { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; border: 2px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.5); }
@@ -142,7 +202,7 @@
                 <a href="index.html" class="nav-link-custom">
                     <i class="bi bi-speedometer2 fs-5"></i> Inicio
                 </a>
-                <a href="mapa.html" class="nav-link-custom active">
+                <a href="Carro.html" class="nav-link-custom active">
                     <i class="bi bi-geo-alt fs-5"></i> Monitoreo de Ruta
                 </a>
             </nav>
@@ -259,14 +319,17 @@
          regresa sola al GPS real en cuanto vuelva a tener señal.
     ============================================================ -->
     <div id="modalPrediccionIA" class="modal-ia-overlay">
-        <div class="modal-ia-card">
+        <div class="modal-ia-card" id="modalIACard">
             <div class="modal-ia-header">
                 <h3><i class="fas fa-brain"></i> Predicción de IA - Cadena de Frío</h3>
                 <button class="cerrar-modal-ia" onclick="cerrarModalPrediccionIA()">×</button>
             </div>
 
-            <div class="modal-ia-badge-fuente" id="modalIAFuenteUbicacion">
-                📍 Obteniendo ubicación...
+            <div class="modal-ia-top-row">
+                <span class="modal-ia-riesgo-pill riesgo-normal" id="modalIARiesgoPill">🧠 Analizando...</span>
+                <div class="modal-ia-badge-fuente" id="modalIAFuenteUbicacion">
+                    📍 Obteniendo ubicación...
+                </div>
             </div>
 
             <div class="modal-ia-console" id="modalIAConsola">
@@ -302,7 +365,12 @@
         const db = getDatabase(app);
 
         // CONFIGURACIÓN
-        const LIMITE_TEMPERATURA_ALTA = 28; // Ajusta esto según lo que requieras
+        // Debe coincidir con el badge "Rango de Temperatura Recomendada"
+        // que se muestra arriba del mapa (18°C - 28°C). Si cambias los
+        // valores aquí, cambia también el HTML del badge para que no
+        // queden desincronizados.
+        const LIMITE_TEMP_MIN = 18;
+        const LIMITE_TEMP_MAX = 28;
         let map;
         let graficaTemperatura;
         const markersCamiones = {};
@@ -381,49 +449,65 @@
         }
 
         // 4. PROCESAR DATOS Y ACTUALIZAR UI
-        function procesarNuevosDatos(datosNube) {
+        async function procesarNuevosDatos(datosNube) {
             miCamion.temperaturaActualC = (datosNube.temperatura !== "Error") ? parseFloat(datosNube.temperatura) : 0;
             miCamion.velocidadKmh = datosNube.velocidad_kmh || 0;
-            
-            // Validar Alertas
-            miCamion.alertaActiva = miCamion.temperaturaActualC >= LIMITE_TEMPERATURA_ALTA;
-            
-            // GPS
+
+            // Alerta = temperatura fuera del rango recomendado (18°C-28°C,
+            // el mismo que se muestra en el badge de arriba del mapa)...
+            const fueraDeRangoRecomendado =
+                miCamion.temperaturaActualC < LIMITE_TEMP_MIN || miCamion.temperaturaActualC > LIMITE_TEMP_MAX;
+
+            // ...O que la IA (Gemini) ya haya calculado un riesgo real,
+            // aunque la lectura puntual todavía no rebase el rango.
+            const analisis = datosNube.analisisIA;
+            const riesgoIAActivo = !!analisis && (analisis.nivelRiesgo === "alerta" || analisis.nivelRiesgo === "critico");
+
+            miCamion.alertaActiva = fueraDeRangoRecomendado || riesgoIAActivo;
+
+            // UBICACIÓN: usa el GPS real del ESP32 si ya está mandando
+            // coordenadas válidas; si no, cae automáticamente a la
+            // ubicación de esta computadora/celular como respaldo, y
+            // regresa sola al GPS real en cuanto vuelva a tener señal.
             gpsReal = datosNube.latitud !== "Buscando..." && datosNube.longitud !== "Buscando...";
 
+            let ubicacion = null;
+
             if (gpsReal) {
-                miCamion.ubicacionActual.lat = parseFloat(datosNube.latitud);
-                miCamion.ubicacionActual.lng = parseFloat(datosNube.longitud);
+                ubicacion = { lat: parseFloat(datosNube.latitud), lng: parseFloat(datosNube.longitud), fuente: "gps" };
                 miCamion.estado = miCamion.alertaActiva ? "Alerta de Temperatura" : "En Ruta Activa";
-                
+            } else {
+                miCamion.estado = miCamion.alertaActiva
+                    ? "Alerta de Temperatura (ubicación de respaldo)"
+                    : "En ruta (esperando señal GPS del vehículo)";
+                ubicacion = await obtenerUbicacionDelVehiculo();
+            }
+
+            if (ubicacion) {
+                miCamion.ubicacionActual.lat = ubicacion.lat;
+                miCamion.ubicacionActual.lng = ubicacion.lng;
+
                 // Actualizar estela y mover mapa
-                const nuevaCoord = [miCamion.ubicacionActual.lat, miCamion.ubicacionActual.lng];
+                const nuevaCoord = [ubicacion.lat, ubicacion.lng];
                 coordenadasEstela.push(nuevaCoord);
                 estelaRuta.setLatLngs(coordenadasEstela);
                 map.panTo(nuevaCoord);
-                
+
                 // Si hay alerta, pintar la estela de rojo
                 if (miCamion.alertaActiva) {
                     estelaRuta.setStyle({ color: "#ef4444", weight: 6 });
                 } else {
                     estelaRuta.setStyle({ color: "#22c55e", weight: 5 });
                 }
-            } else {
-                miCamion.estado = "Esperando señal satelital...";
             }
 
-            actualizarBadgeFuente(gpsReal ? "gps" : "simulada");
+            actualizarBadgeFuente(ubicacion ? ubicacion.fuente : null);
             evaluarYAbrirModalIA(datosNube);
 
             actualizarMarcadorCamion();
             actualizarTabla();
             actualizarMetricas();
             actualizarGraficaCamiones();
-            
-            // Disparar las notificaciones visuales y sonoras de tu código original
-            if (miCamion.alertaActiva) {
-                revisarAlertaCamion(datosNube.timestamp);
-            }
         }
 
         function actualizarMarcadorCamion() {
@@ -559,14 +643,21 @@
         function textoFuenteUbicacion(fuente) {
             return fuente === "gps"
                 ? "📍 Ubicación real (GPS del vehículo)"
-                : "📍 Ubicación real (GPS del vehículo)";
+                : "💻 Ubicación de respaldo (GPS de esta computadora)";
         }
 
         function actualizarBadgeFuente(fuente) {
             const badge = document.getElementById("badgeUbicacionFuente");
             if (!badge) return;
-            badge.textContent = textoFuenteUbicacion(fuente);
+
             badge.classList.remove("fuente-gps", "fuente-simulada");
+
+            if (!fuente) {
+                badge.textContent = "⚠️ Sin ubicación disponible (ni GPS ni navegador)";
+                return;
+            }
+
+            badge.textContent = textoFuenteUbicacion(fuente);
             badge.classList.add(fuente === "gps" ? "fuente-gps" : "fuente-simulada");
         }
 
@@ -633,21 +724,46 @@
         // rurales o alejadas de hospitales).
         const RADIOS_BUSQUEDA_HOSPITAL_M = [8000, 15000, 30000, 50000];
 
-        // Guarda el último error de red al buscar hospital, para poder
-        // mostrarlo en el modal en vez de solo dejarlo en la consola.
-        let ultimoErrorBusquedaHospital = null;
+        // Varios servidores públicos de Overpass. overpass-api.de a veces
+        // deja de mandar el header CORS cuando está saturado; si eso pasa,
+        // probamos con los otros espejos automáticamente.
+        // kumi.systems y private.coffee suelen ser más estables que el
+        // servidor oficial (overpass-api.de), así que se prueban primero.
+        const SERVIDORES_OVERPASS = [
+            "https://overpass.kumi.systems/api/interpreter",
+            "https://overpass.private.coffee/api/interpreter",
+            "https://overpass-api.de/api/interpreter"
+        ];
 
-        // Busca hospitales dentro de un radio específico llamando a nuestra
-        // propia función serverless (/api/hospital). Esa función es la que
-        // habla con Overpass del lado del servidor, así evitamos los
-        // bloqueos de CORS que pasan al llamar a Overpass directo desde
-        // el navegador (como cuando el sitio corre en Vercel).
-        async function buscarHospitalesEnRadio(lat, lng, radioMetros) {
-            const respuesta = await fetch(`/api/hospital?lat=${lat}&lng=${lng}&radio=${radioMetros}`);
+        // Cuánto se espera como máximo a que responda cada servidor antes
+        // de darlo por caído y pasar al siguiente (en milisegundos).
+        const TIMEOUT_OVERPASS_MS = 6000;
+
+        // Busca hospitales dentro de un radio específico (en metros) usando un servidor Overpass dado.
+        async function buscarHospitalesEnRadio(servidorOverpass, lat, lng, radioMetros) {
+            const consulta = `[out:json][timeout:25];(node["amenity"="hospital"](around:${radioMetros},${lat},${lng});way["amenity"="hospital"](around:${radioMetros},${lat},${lng}););out center 15;`;
+
+            const controlador = new AbortController();
+            const idTimeout = setTimeout(() => controlador.abort(), TIMEOUT_OVERPASS_MS);
+
+            let respuesta;
+            try {
+                respuesta = await fetch(servidorOverpass, {
+                    method: "POST",
+                    body: consulta,
+                    signal: controlador.signal
+                });
+            } catch (error) {
+                if (error.name === "AbortError") {
+                    throw new Error(`Sin respuesta de ${servidorOverpass} en ${TIMEOUT_OVERPASS_MS / 1000}s`);
+                }
+                throw error;
+            } finally {
+                clearTimeout(idTimeout);
+            }
 
             if (!respuesta.ok) {
-                const detalle = await respuesta.json().catch(() => ({}));
-                throw new Error(detalle.error || `Nuestra API respondió con código ${respuesta.status}`);
+                throw new Error(`Overpass respondió con código ${respuesta.status}`);
             }
 
             const datos = await respuesta.json();
@@ -676,41 +792,39 @@
             return mejor;
         }
 
-        // Prueba radios cada vez más grandes hasta encontrar un hospital.
-        // Antes de llamar a la API, revisa un caché en sessionStorage: si
-        // ya buscamos un hospital cerca de esta misma zona hace poco, lo
-        // reutilizamos en vez de volver a golpear Overpass (evita el 429
-        // de "demasiadas peticiones" al abrir el modal varias veces
-        // seguidas mientras se prueba).
-        function claveCacheHospital(lat, lng) {
-            // Redondeamos a ~1 km para que pequeños movimientos del GPS
-            // sigan usando el mismo resultado en caché.
-            return `hospitalCercano:${lat.toFixed(2)}:${lng.toFixed(2)}`;
-        }
+        // Guarda el último error de red al buscar hospital, para poder
+        // mostrarlo en el modal en vez de solo dejarlo en la consola.
+        let ultimoErrorBusquedaHospital = null;
 
+        // Prueba cada servidor Overpass; si uno falla por completo (CORS,
+        // red caída, timeout), pasa al siguiente. Dentro de un mismo
+        // servidor que sí responde, prueba radios cada vez más grandes.
         async function buscarHospitalCercano(lat, lng) {
             ultimoErrorBusquedaHospital = null;
-            const clave = claveCacheHospital(lat, lng);
 
-            try {
-                const enCache = sessionStorage.getItem(clave);
-                if (enCache) return JSON.parse(enCache);
-            } catch (error) {
-                // si sessionStorage falla (modo incógnito, etc.) simplemente seguimos sin caché
-            }
+            for (const servidor of SERVIDORES_OVERPASS) {
+                let servidorFalló = false;
 
-            for (const radioMetros of RADIOS_BUSQUEDA_HOSPITAL_M) {
-                try {
-                    const encontrado = await buscarHospitalesEnRadio(lat, lng, radioMetros);
-                    if (encontrado) {
-                        encontrado.radioBusquedaKm = radioMetros / 1000;
-                        try { sessionStorage.setItem(clave, JSON.stringify(encontrado)); } catch (error) {}
-                        return encontrado;
+                for (const radioMetros of RADIOS_BUSQUEDA_HOSPITAL_M) {
+                    try {
+                        const encontrado = await buscarHospitalesEnRadio(servidor, lat, lng, radioMetros);
+                        if (encontrado) {
+                            encontrado.radioBusquedaKm = radioMetros / 1000;
+                            return encontrado;
+                        }
+                    } catch (error) {
+                        console.error(`Error con ${servidor} en radio de ${radioMetros / 1000} km:`, error);
+                        ultimoErrorBusquedaHospital = error.message;
+                        servidorFalló = true;
+                        break; // este servidor no sirve, no perdemos tiempo probando más radios aquí
                     }
-                } catch (error) {
-                    console.error(`Error buscando hospital en radio de ${radioMetros / 1000} km:`, error);
-                    ultimoErrorBusquedaHospital = error.message;
-                    return null; // si nuestra propia API falla, no insistimos con más radios
+                }
+
+                // Si el servidor respondió bien pero de verdad no encontró
+                // nada en ningún radio, confiamos en ese resultado y no
+                // seguimos probando otros espejos (misma base de datos OSM).
+                if (!servidorFalló) {
+                    return null;
                 }
             }
 
@@ -769,14 +883,55 @@
             const overlay = document.getElementById("modalPrediccionIA");
             overlay.classList.add("show");
 
+            // Mismo aviso sonoro/vibración que antes traía el popup chico,
+            // ahora disparado junto con el modal grande.
+            if (sonidoHabilitado) sonidoAlarma();
+            if ("vibrate" in navigator) navigator.vibrate([400, 200, 400, 200, 600]);
+
+            // Colorea el borde/resplandor de la tarjeta según el riesgo
+            // real que calculó la IA (normal/atención/alerta/crítico).
+            const tarjeta = document.getElementById("modalIACard");
+            tarjeta.classList.remove("riesgo-normal", "riesgo-atencion", "riesgo-alerta", "riesgo-critico");
+            tarjeta.classList.add(`riesgo-${analisis.nivelRiesgo}`);
+
+            const iconosRiesgo = { normal: "🟢", atencion: "🟡", alerta: "🟠", critico: "🔴" };
+            const pill = document.getElementById("modalIARiesgoPill");
+            pill.classList.remove("riesgo-normal", "riesgo-atencion", "riesgo-alerta", "riesgo-critico");
+            pill.classList.add(`riesgo-${analisis.nivelRiesgo}`);
+            pill.textContent = `${iconosRiesgo[analisis.nivelRiesgo] || "🧠"} ${analisis.nivelRiesgo.toUpperCase()} · ${analisis.probabilidadFallaPct}% probabilidad de falla`;
+
+            const esUrgente = analisis.nivelRiesgo === "alerta" || analisis.nivelRiesgo === "critico";
+
             document.getElementById("modalIAConsola").innerHTML = `
-                <div><span class="consola-etiqueta">Camión:</span> ${camionId}</div>
-                <div><span class="consola-etiqueta">Nivel de riesgo:</span> <b class="riesgo-${analisis.nivelRiesgo}">${analisis.nivelRiesgo.toUpperCase()}</b></div>
-                <div><span class="consola-etiqueta">Probabilidad de falla:</span> ${analisis.probabilidadFallaPct}%</div>
-                <div><span class="consola-etiqueta">Temperatura analizada:</span> ${analisis.temperaturaAnalizadaC ?? "--"} °C</div>
-                <div><span class="consola-etiqueta">Predicción:</span> ${analisis.prediccion}</div>
-                <div><span class="consola-etiqueta">Mensaje:</span> ${analisis.mensaje}</div>
-                <div><span class="consola-etiqueta">Acción recomendada:</span> ${analisis.accionRecomendada}</div>
+                <div class="modal-ia-datos-grid">
+                    <div class="modal-ia-dato">
+                        <span class="etiqueta">Camión</span>
+                        <span class="valor">${camionId}</span>
+                    </div>
+                    <div class="modal-ia-dato">
+                        <span class="etiqueta">Temperatura analizada</span>
+                        <span class="valor">${analisis.temperaturaAnalizadaC ?? "--"} °C</span>
+                    </div>
+                    <div class="modal-ia-dato">
+                        <span class="etiqueta">Probabilidad de falla</span>
+                        <span class="valor">${analisis.probabilidadFallaPct}%</span>
+                    </div>
+                </div>
+
+                <div class="modal-ia-texto-bloque ${esUrgente ? "acento-alerta" : ""}">
+                    <div class="etiqueta"><i class="fas fa-chart-line"></i> Predicción</div>
+                    <div class="contenido">${analisis.prediccion}</div>
+                </div>
+
+                <div class="modal-ia-texto-bloque ${esUrgente ? "acento-alerta" : ""}">
+                    <div class="etiqueta"><i class="fas fa-comment-dots"></i> Mensaje</div>
+                    <div class="contenido">${analisis.mensaje}</div>
+                </div>
+
+                <div class="modal-ia-texto-bloque ${esUrgente ? "acento-alerta" : ""}">
+                    <div class="etiqueta"><i class="fas fa-list-check"></i> Acción recomendada</div>
+                    <div class="contenido">${analisis.accionRecomendada}</div>
+                </div>
             `;
 
             const badgeModal = document.getElementById("modalIAFuenteUbicacion");

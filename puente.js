@@ -33,7 +33,7 @@ const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GE
 
 // Umbral solo como referencia para el prompt (la decisión real la hace la IA,
 // no un simple if/else como antes).
-const TEMP_REFERENCIA_MAX_C = Number(process.env.TEMP_REFERENCIA_MAX_C || 5.5);
+const TEMP_REFERENCIA_MAX_C = Number(process.env.TEMP_REFERENCIA_MAX_C || 28);
 
 // Cuántas lecturas recientes mandamos como contexto a la IA.
 const TAMANO_HISTORIAL = 10;
