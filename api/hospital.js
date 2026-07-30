@@ -81,7 +81,14 @@ module.exports = async function handler(req, res) {
         return res.status(200).json(enCache.datos);
     }
 
-    const consulta = `[out:json][timeout:25];(node["amenity"="hospital"](around:${radio},${lat},${lng});way["amenity"="hospital"](around:${radio},${lat},${lng}););out center 15;`;
+    // OJO: no ponemos límite de resultados (nada de "out center 15").
+    // Overpass NO ordena por distancia, regresa los elementos en el
+    // orden interno de su base de datos. Si limitáramos a los primeros
+    // N, en una ciudad con muchos hospitales el hospital realmente más
+    // cercano podría quedar fuera de esa muestra y el cálculo de
+    // distancia (que hacemos después, en el servidor/navegador) elegiría
+    // "el más cercano de una muestra al azar" en vez del más cercano real.
+    const consulta = `[out:json][timeout:25];(node["amenity"="hospital"](around:${radio},${lat},${lng});way["amenity"="hospital"](around:${radio},${lat},${lng}););out center;`;
 
     let ultimoError = null;
 
